@@ -1,0 +1,82 @@
+---
+import '../styles/style.css';
+
+interface Props {
+  title: string;
+  activeNav: 'index' | 'stories' | 'frost' | 'about';
+}
+
+const { title, activeNav } = Astro.props;
+---
+
+<!DOCTYPE html>
+<html lang="zh-TW" data-theme="light-snow">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{title} - 佚雨</title>
+    <script is:inline>
+        (function() {
+            const savedTheme = localStorage.getItem('theme') || 'light-snow';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        })();
+    </script>
+</head>
+<body>
+    <div class="site-container">
+        <header>
+            <div class="logo"><a href="/">留白</a></div>
+            <nav>
+                <ul class="nav-links">
+                    <li><a href="/" class={activeNav === 'index' ? 'active' : ''}>首頁</a></li>
+                    <li><a href="/stories" class={activeNav === 'stories' ? 'active' : ''}>小說</a></li>
+                    <li><a href="/frost" class={activeNav === 'frost' ? 'active' : ''}>霜心雨聚</a></li>
+                    <li><a href="/about" class={activeNav === 'about' ? 'active' : ''}>好奇嗎</a></li>
+                </ul>
+            </nav>
+        </header>
+
+        <main>
+            <slot />
+        </main>
+
+        <footer>
+            <p>© 2026 佚雨. All Rights Reserved.</p>
+            <div class="controls">
+                <button class="btn-control" id="theme-toggle">主題: 淡雪</button>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        function initThemeControl() {
+            const themeToggle = document.getElementById('theme-toggle');
+            const htmlElement = document.documentElement;
+            if (!themeToggle) return;
+
+            const currentTheme = htmlElement.getAttribute('data-theme') || 'light-snow';
+            updateButtonText(currentTheme);
+
+            themeToggle.addEventListener('click', () => {
+                const activeTheme = htmlElement.getAttribute('data-theme');
+                const newTheme = (activeTheme === 'light-snow') ? 'night-rain' : 'light-snow';
+                
+                htmlElement.setAttribute('data-theme', newTheme);
+                localStorage.setItem('theme', newTheme);
+                updateButtonText(newTheme);
+            });
+
+            function updateButtonText(theme: string) {
+                if (theme === 'night-rain') {
+                    themeToggle!.textContent = '主題: 夜雨';
+                } else {
+                    themeToggle!.textContent = '主題: 淡雪';
+                }
+            }
+        }
+
+        initThemeControl();
+        document.addEventListener('astro:after-swap', initThemeControl);
+    </script>
+</body>
+</html>

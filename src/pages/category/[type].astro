@@ -1,0 +1,232 @@
+---
+import { getCollection, type CollectionEntry } from 'astro:content';
+import Layout from '../../layouts/Layout.astro';
+
+export async function getStaticPaths() {
+  // 💡 保持妳原本最乾淨的靜態路徑定義，完全不用改動
+  return [
+    { params: { type: 'green' }, props: { catName: '青茸' } },
+    { params: { type: 'blue' }, props: { catName: '分類二' } }
+  ];
+}
+
+const { type } = Astro.params;
+const { catName } = Astro.props;
+
+const allStories = await getCollection('stories');
+
+// 先篩選出這個分類的故事
+const filteredStories = allStories.filter(
+  (story: CollectionEntry<'stories'>) => story.data.category === catName
+);
+
+// 產出兩種排序陣列
+// 1. 最新發布：order 大到小
+const dateSorted = [...filteredStories].sort((a, b) => (b.data.order ?? 0) - (a.data.order ?? 0));
+
+// 2. 章節正序：order 小到大
+const orderSorted = [...filteredStories].sort((a, b) => (a.data.order ?? 0) - (b.data.order ?? 0));
+
+interface DisplayStory {
+  slug: string;
+  title: string;
+  summary: string;
+}
+
+// 轉換卡片資料的輔助函式（包含原本的 Markdown 符號清洗）
+function processStories(storiesList: CollectionEntry<'stories'>[]): DisplayStory[] {
+  return storiesList.map((story: CollectionEntry<'stories'>) => {
+    const cleanText = story.body ? story.body.replace(/[#*`~_\[\]()]/g, '').replace(/\s+/g, ' ').trim() : '';
+    const summary = cleanText.length > 30 ? cleanText.substring(0, 30) + '...' : cleanText;
+    return {
+      slug: story.id, // 💡 Astro 5.0 id 關鍵修正
+      title: story.data.title,
+      summary: summary
+    };
+  });
+}
+
+const displayDateStories = processStories(dateSorted);
+const displayOrderStories = processStories(orderSorted);
+---
+
+<Layout title={`${catName} 主題全集`} activeNav="stories">
+    <style>
+        /* 1. 限制主內容區域寬度並置中，營造靜謐的閱讀留白感 */
+        .category-container {
+            max-width: 900px;      /* 限制最大寬度，不會讓卡片拉得太寬 */
+            margin: 0 auto;        /* 左右自動留白置中 */
+            padding: 0 1.5rem;     /* 邊距防護 */
+        }
+
+        .category-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3rem;
+            border-bottom: 1px dashed var(--border-color, #eee);
+            padding-bottom: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .back-to-stories {
+            font-family: var(--font-sans);
+            font-size: 0.85rem;
+            color: var(--text-color);
+            text-decoration: none;
+            opacity: 0.5;
+            transition: opacity 0.3s;
+            display: inline-block;
+        }
+        .back-to-stories:hover { opacity: 1; color: var(--nav-active); }
+
+        .title-wrap {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+        .page-title { margin-bottom: 0; }
+
+        /* 排序切換按鈕樣式 */
+        .sort-toggle-wrap {
+            display: flex;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            background: var(--border-color, #f5f5f5);
+            padding: 0.2rem;
+            border-radius: 4px;
+        }
+        .sort-btn {
+            cursor: pointer;
+            padding: 0.1rem 0.4rem;
+            border-radius: 3px;
+            opacity: 0.5;
+            transition: all 0.2s;
+            user-select: none;
+        }
+        .sort-btn.active {
+            opacity: 1;
+            background: var(--bg-color, #fff);
+            font-weight: bold;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        /* 2. 核心：強制桌機網格設定每行剛好「三個卡片」並拉伸高度 */
+        .full-story-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); /* 規定畫出三個等寬縱欄 */
+            gap: 1.5rem;                           /* 精緻間距 */
+            padding: 1rem 0 4rem 0;
+            align-items: stretch;                  /* 讓同排卡片高度對齊撐滿 */
+        }
+        
+        .story-card {
+            display: flex;
+            flex-direction: column;   
+            text-decoration: none;
+            color: inherit;
+            box-sizing: border-box;
+            min-height: 190px;                     /* 強制設定卡片的最低高度 */
+            height: 100%;             
+        }
+
+        /* 讓標題維持適當間距 */
+        .story-card h3 {
+            margin-top: 0;
+            margin-bottom: 0.5rem;
+            font-size: 1.15rem;
+            line-height: 1.4;
+        }
+
+        /* 故事摘要像彈簧一樣自動填滿並往上頂 💡 */
+        .story-card p {
+            flex-grow: 1;             
+            margin-bottom: 0;         
+        }
+
+        .grid-hidden { display: none !important; }
+
+        /* 3. 手機與平板適應：自動彈性換行 */
+        @media (max-width: 900px) {
+            .full-story-grid {
+                grid-template-columns: repeat(2, 1fr); /* 平板變成每行兩個 */
+            }
+        }
+        @media (max-width: 600px) {
+            .category-container { padding: 0 1rem; }
+            .category-info { flex-direction: column; align-items: flex-start; gap: 1rem; }
+            .full-story-grid {
+                grid-template-columns: 1fr;           /* 手機直向時一張一張往下排 */
+            }
+        }
+    </style>
+
+    <div class="category-container">
+        <div class="category-info">
+            <div class="title-wrap">
+                <h2 class="page-title">{catName}</h2>
+                <div class="sort-toggle-wrap">
+                    <span class="sort-btn active" data-sort="date">最新發布</span>
+                    <span class="sort-btn" data-sort="order">章節正序</span>
+                </div>
+            </div>
+            <a href="/stories" class="back-to-stories">← 返回作品列表</a>
+        </div>
+
+        <div class="full-story-grid date-grid">
+            {displayDateStories.length > 0 ? (
+                displayDateStories.map((story) => (
+                    <a href={`/story/${story.slug}?sort=date`} class="story-card">
+                        <h3>{story.title}</h3>
+                        <p>{story.summary}</p>
+                    </a>
+                ))
+            ) : (
+                <p style="text-align:center; opacity:0.5; grid-column: 1/-1; font-family:var(--font-sans);">找不到該主題的軌跡。</p>
+            )}
+        </div>
+
+        <div class="full-story-grid order-grid grid-hidden">
+            {displayOrderStories.length > 0 ? (
+                displayOrderStories.map((story) => (
+                    <a href={`/story/${story.slug}?sort=order`} class="story-card">
+                        <h3>{story.title}</h3>
+                        <p>{story.summary}</p>
+                    </a>
+                ))
+            ) : (
+                <p style="text-align:center; opacity:0.5; grid-column: 1/-1; font-family:var(--font-sans);">找不到該主題的軌跡。</p>
+            )}
+        </div>
+    </div>
+</Layout>
+
+<script>
+    function initPageSortControl() {
+        const sortBtns = document.querySelectorAll('.sort-btn');
+        const dateGrid = document.querySelector('.date-grid');
+        const orderGrid = document.querySelector('.order-grid');
+
+        if (sortBtns.length === 0 || !dateGrid || !orderGrid) return;
+
+        sortBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                sortBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                const sortType = btn.getAttribute('data-sort');
+                if (sortType === 'order') {
+                    dateGrid.classList.add('grid-hidden');
+                    orderGrid.classList.remove('grid-hidden');
+                } else {
+                    orderGrid.classList.add('grid-hidden');
+                    dateGrid.classList.remove('grid-hidden');
+                }
+            });
+        });
+    }
+
+    // Astro 的 SPA 路由生命週期事件綁定
+    initPageSortControl();
+    document.addEventListener('astro:after-swap', initPageSortControl);
+</script>

@@ -1,0 +1,38 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="霜心雨聚" activeNav="frost">
+    <section class="frost-center">
+        <div class="frost-text" id="daily-frost-content">
+            </div>
+    </section>
+</Layout>
+
+<script>
+    function initDailyFrost() {
+        const quotes = [
+            "獨倚樓欄斜望市<br>沉思世間百慕華",
+            "昨夜如雨落下",
+            "冬歌夜雪幾殘盡，曉月寧無聲。<br>俯仰承散絕境旅，蝶逝輓家遊故人。",
+            "世人皆醒我獨醉",
+            "蟬時雨<br>夏夜空"
+        ];
+
+        const contentElement = document.getElementById('daily-frost-content');
+        if (!contentElement || quotes.length === 0) return;
+
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth() + 1;
+        const date = now.getDate();
+
+        const dateIdentifier = year * 10000 + month * 100 + date;
+        const targetIndex = dateIdentifier % quotes.length;
+
+        contentElement.innerHTML = quotes[targetIndex];
+    }
+
+    initDailyFrost();
+    document.addEventListener('astro:after-swap', initDailyFrost);
+</script>

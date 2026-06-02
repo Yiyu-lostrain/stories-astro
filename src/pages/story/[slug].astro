@@ -1,0 +1,184 @@
+---
+import { getCollection, render, type CollectionEntry } from 'astro:content';
+import Layout from '../../layouts/Layout.astro';
+
+export async function getStaticPaths() {
+  const stories = await getCollection('stories');
+  
+  // 1. 最新發布排序（純比 order 大到小）
+  const dateSorted = [...stories].sort((a, b) => (b.data.order ?? 0) - (a.data.order ?? 0));
+
+  // 2. 章節順序排序（純比 order 小到大）
+  const orderSorted = [...stories].sort((a, b) => (a.data.order ?? 0) - (b.data.order ?? 0));
+
+  return dateSorted.map((story) => {
+    const dateIdx = dateSorted.findIndex(s => s.id === story.id);
+    const orderIdx = orderSorted.findIndex(s => s.id === story.id);
+
+    return {
+      params: { slug: story.id }, 
+      props: {
+        story,
+        datePrev: dateIdx > 0 ? dateSorted[dateIdx - 1] : null,
+        dateNext: dateIdx < dateSorted.length - 1 ? dateSorted[dateIdx + 1] : null,
+        orderPrev: orderIdx > 0 ? orderSorted[orderIdx - 1] : null,
+        orderNext: orderIdx < orderSorted.length - 1 ? orderSorted[orderIdx + 1] : null
+      }
+    };
+  });
+}
+
+interface Props {
+  story: CollectionEntry<'stories'>;
+  datePrev: CollectionEntry<'stories'> | null;
+  dateNext: CollectionEntry<'stories'> | null;
+  orderPrev: CollectionEntry<'stories'> | null;
+  orderNext: CollectionEntry<'stories'> | null;
+}
+
+const { story, datePrev, dateNext, orderPrev, orderNext } = Astro.props;
+const { Content } = await render(story);
+---
+
+<Layout title={story.data.title} activeNav="stories">
+    <style>
+        article { position: relative; }
+        
+        /* 公用導覽列基礎設定 */
+        .story-navigation {
+            display: flex;
+            margin-top: 5rem;
+            border-top: 1px solid var(--border-color, #eee);
+            padding-top: 2rem;
+        }
+
+        /* 💻 桌機大螢幕樣式 (1241px 以上) */
+        @media (min-width: 1241px) {
+            /* 1. 隱形牆導覽列：置中 */
+            .desktop-hover-nav { justify-content: center; }
+            
+            /* 2. 底部的文字導覽列：在大螢幕時強制讓「返回列表」居中 💡 */
+            .bottom-text-nav .nav-group { justify-content: center !important; }
+
+            .hover-zone-prev, .hover-zone-next {
+                position: fixed;
+                top: 80px; 
+                height: calc(100vh - 80px); 
+                width: 15vw; 
+                z-index: 90;
+                display: flex;
+                align-items: center;
+                pointer-events: auto; 
+            }
+            .hover-zone-prev { left: 0; justify-content: flex-start; padding-left: 4vw; }
+            .hover-zone-next { right: 0; justify-content: flex-end; padding-right: 4vw; }
+
+            .nav-floating-prev, .nav-floating-next {
+                position: static; 
+                margin: 0;
+                margin-top: 0rem; 
+                font-family: inherit !important;
+                font-size: inherit !important;
+                font-weight: inherit !important;
+                color: inherit !important;
+                letter-spacing: inherit !important;
+                text-decoration: inherit !important;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            }
+            .hover-zone-prev:hover .nav-floating-prev,
+            .hover-zone-next:hover .nav-floating-next { opacity: 1; }
+        }
+
+        /* 📱 手機平版小螢幕樣式 (1240px 以下) */
+        @media (max-width: 1240px) {
+            /* 小螢幕時分開兩側排列 */
+            .story-navigation { justify-content: space-between; align-items: center; }
+            .desktop-hover-nav { display: none !important; } /* 直接隱藏大螢幕的懸浮牆 */
+        }
+
+        .nav-group { display: none; width: 100%; justify-content: inherit; align-items: inherit; }
+        .nav-group.active { display: flex; }
+    </style>
+
+    <article>
+        <div class="article-header">
+            <div class="article-meta">
+                <span>{story.data.category}</span>
+                {story.data.date && ( <> <span>/</span> <span>{story.data.date}</span> </> )}
+            </div>
+            <h1 class="article-title">{story.data.title}</h1>
+        </div>
+
+        <div class="article-content">
+            <Content />
+        </div>
+
+        <div class="story-navigation desktop-hover-nav">
+            <div class="nav-group date-nav active">
+                <div class="hover-zone-prev">
+                    {datePrev ? <a href={`/story/${datePrev.id}?sort=date`} class="story-nav-link nav-floating-prev">← 上一篇</a> : <span class="story-nav-link disabled nav-floating-prev">← 上一篇</span>}
+                </div>
+                <div class="hover-zone-next">
+                    {dateNext ? <a href={`/story/${dateNext.id}?sort=date`} class="story-nav-link nav-floating-next">下一篇 →</a> : <span class="story-nav-link disabled nav-floating-next">下一篇 →</span>}
+                </div>
+            </div>
+            <div class="nav-group order-nav">
+                <div class="hover-zone-prev">
+                    {orderPrev ? <a href={`/story/${orderPrev.id}?sort=order`} class="story-nav-link nav-floating-prev">← 上一篇</a> : <span class="story-nav-link disabled nav-floating-prev">← 上一篇</span>}
+                </div>
+                <div class="hover-zone-next">
+                    {orderNext ? <a href={`/story/${orderNext.id}?sort=order`} class="story-nav-link nav-floating-next">下一篇 →</a> : <span class="story-nav-link disabled nav-floating-next">下一篇 →</span>}
+                </div>
+            </div>
+        </div>
+
+        <div class="story-navigation bottom-text-nav">
+            <div class="nav-group date-nav active" style="width:100%; justify-content:space-between; align-items:center;">
+                {datePrev ? <a href={`/story/${datePrev.id}?sort=date`} class="story-nav-link screen-small-only">← 上一篇</a> : <span class="story-nav-link disabled screen-small-only">← 上一篇</span>}
+                <a href="/stories" class="story-nav-link" style="font-size: 0.85rem; letter-spacing: 0.05em;">返回列表</a>
+                {dateNext ? <a href={`/story/${dateNext.id}?sort=date`} class="story-nav-link screen-small-only">下一篇 →</a> : <span class="story-nav-link disabled screen-small-only">下一篇 →</span>}
+            </div>
+            <div class="nav-group order-nav" style="width:100%; justify-content:space-between; align-items:center;">
+                {orderPrev ? <a href={`/story/${orderPrev.id}?sort=order`} class="story-nav-link screen-small-only">← 上一篇</a> : <span class="story-nav-link disabled screen-small-only">← 上一篇</span>}
+                <a href="/stories" class="story-nav-link" style="font-size: 0.85rem; letter-spacing: 0.05em;">返回列表</a>
+                {orderNext ? <a href={`/story/${orderNext.id}?sort=order`} class="story-nav-link screen-small-only">下一篇 →</a> : <span class="story-nav-link disabled screen-small-only">下一篇 →</span>}
+            </div>
+        </div>
+    </article>
+
+    <button id="back-to-top" title="回到頂部">↑</button>
+</Layout>
+
+<style is:global>
+    @media (min-width: 1241px) { .screen-small-only { display: none !important; } }
+</style>
+
+<script>
+    function initNavigationRoute() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const sortType = urlParams.get('sort') || 'date';
+        const dateNavs = document.querySelectorAll('.date-nav');
+        const orderNavs = document.querySelectorAll('.order-nav');
+
+        if (sortType === 'order') {
+            dateNavs.forEach(el => el.classList.remove('active'));
+            orderNavs.forEach(el => el.classList.add('active'));
+        } else {
+            orderNavs.forEach(el => el.classList.remove('active'));
+            dateNavs.forEach(el => el.classList.add('active'));
+        }
+
+        const backToTopBtn = document.getElementById('back-to-top');
+        if (!backToTopBtn) return;
+        const handleScroll = () => {
+            if (window.scrollY > 400) backToTopBtn.classList.add('show');
+            else backToTopBtn.classList.remove('show');
+        };
+        window.removeEventListener('scroll', handleScroll);
+        window.addEventListener('scroll', handleScroll);
+        backToTopBtn.addEventListener('click', () => { window.scrollTo({ top: 0, behavior: 'smooth' }); });
+    }
+    initNavigationRoute();
+    document.addEventListener('astro:after-swap', initNavigationRoute);
+</script>

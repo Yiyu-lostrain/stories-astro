@@ -1,0 +1,164 @@
+---
+import { getCollection, type CollectionEntry } from 'astro:content';
+import Layout from '../layouts/Layout.astro';
+
+const allStories = await getCollection('stories');
+
+// 💡 終極精簡：完全不比日期，直接由 order 決定一切！
+// 1. 最新發布：order 大到小（最新章節在最前）
+const dateSorted = [...allStories].sort((a, b) => (b.data.order ?? 0) - (a.data.order ?? 0));
+
+// 2. 章節正序：order 小到大（第一章在最前）
+const orderSorted = [...allStories].sort((a, b) => (a.data.order ?? 0) - (b.data.order ?? 0));
+
+const categories = [
+  { id: 'green', name: '青茸' },
+  { id: 'blue', name: '分類二' }
+];
+
+interface DisplayStory {
+  id: string;
+  title: string;
+  summary: string;
+}
+
+function processStories(storiesList: CollectionEntry<'stories'>[], catName: string): DisplayStory[] {
+  return storiesList
+    .filter(s => s.data.category === catName)
+    .map(story => {
+      const cleanText = story.body ? story.body.replace(/[#*`~_\[\]()]/g, '').replace(/\s+/g, ' ').trim() : '';
+      const summary = cleanText.length > 30 ? cleanText.substring(0, 30) + '...' : cleanText;
+      return { id: story.id, title: story.data.title, summary };
+    });
+}
+
+const processedCategories = categories.map(cat => ({
+  id: cat.id,
+  name: cat.name,
+  dateStories: processStories(dateSorted, cat.name),
+  orderStories: processStories(orderSorted, cat.name)
+}));
+---
+
+<Layout title="文章總覽" activeNav="stories">
+    <style>
+        .category-section { position: relative; margin-bottom: 4rem; padding: 0 1rem; }
+        .slider-wrapper { position: relative; width: 100%; overflow: hidden; }
+        .story-grid { display: flex; gap: 1.5rem; overflow-x: auto; scroll-behavior: smooth; padding: 1rem 0; -ms-overflow-style: none; scrollbar-width: none; }
+        .story-grid::-webkit-scrollbar { display: none; }
+        .story-card { flex: 0 0 280px; box-sizing: border-box; }
+        .slider-btn { position: absolute; top: 55%; transform: translateY(-50%); width: 2.5rem; height: 2.5rem; background: var(--bg-color, #fff); border: 1px solid var(--border-color, #eee); color: var(--text-color, #333); border-radius: 50%; cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 1.2rem; opacity: 0; transition: all 0.3s ease; z-index: 10; user-select: none; }
+        .category-section:hover .slider-btn { opacity: 0.6; }
+        .slider-btn:hover { opacity: 1 !important; border-color: var(--nav-active); color: var(--nav-active); }
+        .btn-left { left: -1rem; }
+        .btn-right { right: -1rem; }
+        @media (max-width: 768px) { .slider-btn { display: none !important; } .category-section { padding: 0; } .story-card { flex: 0 0 240px; } }
+        .category-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-right: 0.5rem; }
+        .category-title-wrap { display: flex; align-items: center; gap: 1rem; }
+        .category-header .category-title { margin-bottom: 0; }
+        .sort-toggle-wrap { display: flex; gap: 0.5rem; font-size: 0.8rem; background: var(--border-color, #f5f5f5); padding: 0.2rem; border-radius: 4px; }
+        .sort-btn { cursor: pointer; padding: 0.1rem 0.4rem; border-radius: 3px; opacity: 0.5; transition: all 0.2s; user-select: none; }
+        .sort-btn.active { opacity: 1; background: var(--bg-color, #fff); font-weight: bold; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .see-all-btn { font-family: var(--font-sans); font-size: 0.85rem; color: var(--text-color); text-decoration: none; opacity: 0.5; transition: all 0.3s ease; border-bottom: 1px solid transparent; }
+        .see-all-btn:hover { opacity: 1; color: var(--nav-active); border-bottom-color: var(--nav-active); }
+        .grid-hidden { display: none !important; }
+    </style>
+
+    <h2 class="page-title">小說</h2>
+
+    {processedCategories.map((cat) => (
+        <section class="category-section" data-cat-id={cat.id}>
+            <div class="category-header">
+                <div class="category-title-wrap">
+                    <h3 class="category-title">{cat.name}</h3>
+                    <div class="sort-toggle-wrap">
+                        <span class="sort-btn active" data-sort="date">最新發布</span>
+                        <span class="sort-btn" data-sort="order">章節正序</span>
+                    </div>
+                </div>
+                <a href={`/category/${cat.id}`} class="see-all-btn">查看全部 →</a>
+            </div>
+            
+            <button class="slider-btn btn-left">‹</button>
+            <button class="slider-btn btn-right">›</button>
+            
+            <div class="slider-wrapper">
+                <div class="story-grid date-grid">
+                    {cat.dateStories.map((story) => (
+                        <a href={`/story/${story.id}?sort=date`} class="story-card">
+                            <h3>{story.title}</h3>
+                            <p>{story.summary}</p>
+                        </a>
+                    ))}
+                </div>
+                <div class="story-grid order-grid grid-hidden">
+                    {cat.orderStories.map((story) => (
+                        <a href={`/story/${story.id}?sort=order`} class="story-card">
+                            <h3>{story.title}</h3>
+                            <p>{story.summary}</p>
+                        </a>
+                    ))}
+                </div>
+            </div>
+        </section>
+    ))}
+</Layout>
+
+<script>
+    function initSliderControl() {
+        const sections = document.querySelectorAll('.category-section');
+        sections.forEach(section => {
+            const sortBtns = section.querySelectorAll('.sort-btn');
+            const dateGrid = section.querySelector('.date-grid');
+            const orderGrid = section.querySelector('.order-grid');
+
+            sortBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    sortBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    const sortType = btn.getAttribute('data-sort');
+                    if (sortType === 'order') {
+                        dateGrid?.classList.add('grid-hidden');
+                        orderGrid?.classList.remove('grid-hidden');
+                    } else {
+                        orderGrid?.classList.add('grid-hidden');
+                        dateGrid?.classList.remove('grid-hidden');
+                    }
+                });
+            });
+
+            const grids = section.querySelectorAll('.story-grid');
+            const btnLeft = section.querySelector('.btn-left') as HTMLButtonElement;
+            const btnRight = section.querySelector('.btn-right') as HTMLButtonElement;
+            if (grids.length === 0 || !btnLeft || !btnRight) return;
+
+            let holdTimeout: any = null; let holdInterval: any = null; let isLongPressing = false;
+            const clickDistance = 320; const holdSpeed = 16;       
+
+            function getActiveGrid() { return Array.from(grids).find(g => !g.classList.contains('grid-hidden')) as HTMLElement; }
+            function handleScroll(direction: 'left' | 'right') {
+                if (isLongPressing) return;
+                const grid = getActiveGrid(); if (!grid) return;
+                grid.style.scrollBehavior = 'smooth';
+                const amount = direction === 'right' ? clickDistance : -clickDistance;
+                grid.scrollBy({ left: amount, behavior: 'smooth' });
+            }
+            function startHold(direction: 'left' | 'right') {
+                isLongPressing = true; const grid = getActiveGrid(); if (!grid) return;
+                grid.style.scrollBehavior = 'auto'; 
+                holdInterval = setInterval(() => { grid.scrollLeft += (direction === 'right' ? holdSpeed : -holdSpeed); }, 16); 
+            }
+            function endHold() { clearTimeout(holdTimeout); clearInterval(holdInterval); setTimeout(() => { isLongPressing = false; grids.forEach(g => { (g as HTMLElement).style.scrollBehavior = 'smooth'; }); }, 50); }
+
+            btnRight.addEventListener('click', () => handleScroll('right'));
+            btnRight.addEventListener('mousedown', () => { holdTimeout = setTimeout(() => startHold('right'), 250); });
+            btnLeft.addEventListener('click', () => handleScroll('left'));
+            btnLeft.addEventListener('mousedown', () => { holdTimeout = setTimeout(() => startHold('left'), 250); });
+            btnRight.addEventListener('mouseup', endHold); btnRight.addEventListener('mouseleave', endHold);
+            btnLeft.addEventListener('mouseup', endHold); btnLeft.addEventListener('mouseleave', endHold);
+            window.addEventListener('mouseup', endHold);
+        });
+    }
+    initSliderControl();
+    document.addEventListener('astro:after-swap', initSliderControl);
+</script>
