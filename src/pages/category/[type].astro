@@ -3,13 +3,16 @@ import { getCollection, type CollectionEntry } from 'astro:content';
 import Layout from '../../layouts/Layout.astro';
 
 export async function getStaticPaths() {
-  // 💡 保持妳原本最乾淨的靜態路徑定義，完全不用改動
+  // 💡 完美回歸妳的 `type` 命名，並且把所有新大標題底下的分類通通加進來，404 直接消滅！
   return [
     { params: { type: 'green' }, props: { catName: '青茸' } },
-    { params: { type: 'blue' }, props: { catName: '分類二' } }
+    { params: { type: 'blue' }, props: { catName: '分類二' } },
+    { params: { type: 'diary' }, props: { catName: '生活札記' } },
+    { params: { type: 'poetry' }, props: { catName: '現代詩' } }
   ];
 }
 
+// 💡 保持妳原本的變數名稱：type
 const { type } = Astro.params;
 const { catName } = Astro.props;
 
@@ -21,10 +24,7 @@ const filteredStories = allStories.filter(
 );
 
 // 產出兩種排序陣列
-// 1. 最新發布：order 大到小
 const dateSorted = [...filteredStories].sort((a, b) => (b.data.order ?? 0) - (a.data.order ?? 0));
-
-// 2. 章節正序：order 小到大
 const orderSorted = [...filteredStories].sort((a, b) => (a.data.order ?? 0) - (b.data.order ?? 0));
 
 interface DisplayStory {
@@ -33,13 +33,13 @@ interface DisplayStory {
   summary: string;
 }
 
-// 轉換卡片資料的輔助函式（包含原本的 Markdown 符號清洗）
+// 轉換卡片資料的輔助函式
 function processStories(storiesList: CollectionEntry<'stories'>[]): DisplayStory[] {
   return storiesList.map((story: CollectionEntry<'stories'>) => {
     const cleanText = story.body ? story.body.replace(/[#*`~_\[\]()]/g, '').replace(/\s+/g, ' ').trim() : '';
     const summary = cleanText.length > 30 ? cleanText.substring(0, 30) + '...' : cleanText;
     return {
-      slug: story.id, // 💡 Astro 5.0 id 關鍵修正
+      slug: story.id, // Astro 5.0 id
       title: story.data.title,
       summary: summary
     };
@@ -52,11 +52,10 @@ const displayOrderStories = processStories(orderSorted);
 
 <Layout title={`${catName} 主題全集`} activeNav="stories">
     <style>
-        /* 1. 限制主內容區域寬度並置中，營造靜謐的閱讀留白感 */
         .category-container {
-            max-width: 900px;      /* 限制最大寬度，不會讓卡片拉得太寬 */
-            margin: 0 auto;        /* 左右自動留白置中 */
-            padding: 0 1.5rem;     /* 邊距防護 */
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
         }
 
         .category-info {
@@ -87,7 +86,6 @@ const displayOrderStories = processStories(orderSorted);
         }
         .page-title { margin-bottom: 0; }
 
-        /* 排序切換按鈕樣式 */
         .sort-toggle-wrap {
             display: flex;
             gap: 0.5rem;
@@ -111,13 +109,12 @@ const displayOrderStories = processStories(orderSorted);
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
 
-        /* 2. 核心：強制桌機網格設定每行剛好「三個卡片」並拉伸高度 */
         .full-story-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr); /* 規定畫出三個等寬縱欄 */
-            gap: 1.5rem;                           /* 精緻間距 */
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
             padding: 1rem 0 4rem 0;
-            align-items: stretch;                  /* 讓同排卡片高度對齊撐滿 */
+            align-items: stretch;
         }
         
         .story-card {
@@ -126,11 +123,10 @@ const displayOrderStories = processStories(orderSorted);
             text-decoration: none;
             color: inherit;
             box-sizing: border-box;
-            min-height: 190px;                     /* 強制設定卡片的最低高度 */
+            min-height: 190px;
             height: 100%;             
         }
 
-        /* 讓標題維持適當間距 */
         .story-card h3 {
             margin-top: 0;
             margin-bottom: 0.5rem;
@@ -138,7 +134,6 @@ const displayOrderStories = processStories(orderSorted);
             line-height: 1.4;
         }
 
-        /* 故事摘要像彈簧一樣自動填滿並往上頂 💡 */
         .story-card p {
             flex-grow: 1;             
             margin-bottom: 0;         
@@ -146,17 +141,16 @@ const displayOrderStories = processStories(orderSorted);
 
         .grid-hidden { display: none !important; }
 
-        /* 3. 手機與平板適應：自動彈性換行 */
         @media (max-width: 900px) {
             .full-story-grid {
-                grid-template-columns: repeat(2, 1fr); /* 平板變成每行兩個 */
+                grid-template-columns: repeat(2, 1fr);
             }
         }
         @media (max-width: 600px) {
             .category-container { padding: 0 1rem; }
             .category-info { flex-direction: column; align-items: flex-start; gap: 1rem; }
             .full-story-grid {
-                grid-template-columns: 1fr;           /* 手機直向時一張一張往下排 */
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -226,7 +220,6 @@ const displayOrderStories = processStories(orderSorted);
         });
     }
 
-    // Astro 的 SPA 路由生命週期事件綁定
     initPageSortControl();
     document.addEventListener('astro:after-swap', initPageSortControl);
 </script>

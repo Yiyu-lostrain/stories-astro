@@ -4,16 +4,40 @@ import Layout from '../layouts/Layout.astro';
 
 const allStories = await getCollection('stories');
 
-// 💡 終極精簡：完全不比日期，直接由 order 決定一切！
-// 1. 最新發布：order 大到小（最新章節在最前）
+// 排序邏輯維持不變
 const dateSorted = [...allStories].sort((a, b) => (b.data.order ?? 0) - (a.data.order ?? 0));
-
-// 2. 章節正序：order 小到大（第一章在最前）
 const orderSorted = [...allStories].sort((a, b) => (a.data.order ?? 0) - (b.data.order ?? 0));
 
-const categories = [
-  { id: 'green', name: '青茸' },
-  { id: 'blue', name: '分類二' }
+// 定義結構的介面
+interface CategoryStructure {
+  id: string;
+  name: string;
+}
+
+interface MainSectionStructure {
+  mainTitle: string;
+  mainType: string;
+  categories: CategoryStructure[];
+}
+
+// 在這裡定義妳的「大標題」以及底下各自擁有的「小標分類」
+const contentStructure: MainSectionStructure[] = [
+  {
+    mainTitle: '小說作品',
+    mainType: 'novel',
+    categories: [
+      { id: 'green', name: '青茸' },
+      { id: 'blue', name: '分類二' }
+    ]
+  },
+  {
+    mainTitle: '散文隨筆',
+    mainType: 'essay',
+    categories: [
+      { id: 'diary', name: '生活札記' },
+      { id: 'poetry', name: '現代詩' }
+    ]
+  }
 ];
 
 interface DisplayStory {
@@ -22,26 +46,32 @@ interface DisplayStory {
   summary: string;
 }
 
-function processStories(storiesList: CollectionEntry<'stories'>[], catName: string): DisplayStory[] {
+// 修正輔助函式：加上明確的 TypeScript 型別
+function processStories(storiesList: CollectionEntry<'stories'>[], mainType: string, catName: string): DisplayStory[] {
   return storiesList
-    .filter(s => s.data.category === catName)
-    .map(story => {
+    .filter(s => (s.data.type ?? 'novel') === mainType && s.data.category === catName)
+    .map((story: CollectionEntry<'stories'>) => {
       const cleanText = story.body ? story.body.replace(/[#*`~_\[\]()]/g, '').replace(/\s+/g, ' ').trim() : '';
       const summary = cleanText.length > 30 ? cleanText.substring(0, 30) + '...' : cleanText;
       return { id: story.id, title: story.data.title, summary };
     });
 }
 
-const processedCategories = categories.map(cat => ({
-  id: cat.id,
-  name: cat.name,
-  dateStories: processStories(dateSorted, cat.name),
-  orderStories: processStories(orderSorted, cat.name)
+// 建立多層嵌套資料結構
+const renderedStructure = contentStructure.map(mainSection => ({
+  mainTitle: mainSection.mainTitle,
+  categories: mainSection.categories.map(cat => ({
+    id: cat.id,
+    name: cat.name,
+    dateStories: processStories(dateSorted, mainSection.mainType, cat.name),
+    orderStories: processStories(orderSorted, mainSection.mainType, cat.name)
+  }))
 }));
 ---
 
 <Layout title="文章總覽" activeNav="stories">
     <style>
+        .main-section-title { font-size: 1.8rem; margin-top: 3rem; margin-bottom: 1.5rem; padding: 0 1rem; border-left: 4px solid var(--nav-active); padding-left: 1.5rem; }
         .category-section { position: relative; margin-bottom: 4rem; padding: 0 1rem; }
         .slider-wrapper { position: relative; width: 100%; overflow: hidden; }
         .story-grid { display: flex; gap: 1.5rem; overflow-x: auto; scroll-behavior: smooth; padding: 1rem 0; -ms-overflow-style: none; scrollbar-width: none; }
@@ -64,43 +94,47 @@ const processedCategories = categories.map(cat => ({
         .grid-hidden { display: none !important; }
     </style>
 
-    <h2 class="page-title">小說</h2>
-
-    {processedCategories.map((cat) => (
-        <section class="category-section" data-cat-id={cat.id}>
-            <div class="category-header">
-                <div class="category-title-wrap">
-                    <h3 class="category-title">{cat.name}</h3>
-                    <div class="sort-toggle-wrap">
-                        <span class="sort-btn active" data-sort="date">最新發布</span>
-                        <span class="sort-btn" data-sort="order">章節正序</span>
+    {renderedStructure.map((section) => (
+        <>
+            <h2 class="main-section-title">{section.mainTitle}</h2>
+            
+            {section.categories.map((cat) => (
+                <section class="category-section" data-cat-id={cat.id}>
+                    <div class="category-header">
+                        <div class="category-title-wrap">
+                            <h3 class="category-title">{cat.name}</h3>
+                            <div class="sort-toggle-wrap">
+                                <span class="sort-btn active" data-sort="date">最新發布</span>
+                                <span class="sort-btn" data-sort="order">章節正序</span>
+                            </div>
+                        </div>
+                        <a href={`/category/${cat.id}`} class="see-all-btn">查看全部 →</a>
                     </div>
-                </div>
-                <a href={`/category/${cat.id}`} class="see-all-btn">查看全部 →</a>
-            </div>
-            
-            <button class="slider-btn btn-left">‹</button>
-            <button class="slider-btn btn-right">›</button>
-            
-            <div class="slider-wrapper">
-                <div class="story-grid date-grid">
-                    {cat.dateStories.map((story) => (
-                        <a href={`/story/${story.id}?sort=date`} class="story-card">
-                            <h3>{story.title}</h3>
-                            <p>{story.summary}</p>
-                        </a>
-                    ))}
-                </div>
-                <div class="story-grid order-grid grid-hidden">
-                    {cat.orderStories.map((story) => (
-                        <a href={`/story/${story.id}?sort=order`} class="story-card">
-                            <h3>{story.title}</h3>
-                            <p>{story.summary}</p>
-                        </a>
-                    ))}
-                </div>
-            </div>
-        </section>
+                    
+                    <button class="slider-btn btn-left">‹</button>
+                    <button class="slider-btn btn-right">›</button>
+                    
+                    <div class="slider-wrapper">
+                        <div class="story-grid date-grid">
+                            {cat.dateStories.map((story: DisplayStory) => (
+                                <a href={`/story/${story.id}?sort=date`} class="story-card">
+                                    <h3>{story.title}</h3>
+                                    <p>{story.summary}</p>
+                                </a>
+                            ))}
+                        </div>
+                        <div class="story-grid order-grid grid-hidden">
+                            {cat.orderStories.map((story: DisplayStory) => (
+                                <a href={`/story/${story.id}?sort=order`} class="story-card">
+                                    <h3>{story.title}</h3>
+                                    <p>{story.summary}</p>
+                                </a>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+            ))}
+        </>
     ))}
 </Layout>
 

@@ -9,7 +9,11 @@ const storiesCollection = defineCollection({
     title: z.string(),
     date: z.string().optional(),
     category: z.string(),
-    order: z.number().optional(), // 💡 完美進駐：讓系統認得 order 數字欄位，且舊文章沒寫也不會報錯！
+    order: z.number().optional(), // 讓系統認得 order 數字欄位，舊文章沒寫也不會報錯
+    
+    // 💡 漏掉的核心補件：定義大標題類型（如 novel, essay）
+    // .default('novel') 超級重要！這樣以前寫的所有舊小說 frontmatter 就算沒寫 type，也會自動歸類成小說，完全不會報錯！
+    type: z.string().default('novel'), 
   }),
 });
 

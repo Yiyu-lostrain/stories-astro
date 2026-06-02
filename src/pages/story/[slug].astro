@@ -5,13 +5,12 @@ import Layout from '../../layouts/Layout.astro';
 export async function getStaticPaths() {
   const stories = await getCollection('stories');
   
-  // 1. 最新發布排序（純比 order 大到小）
-  const dateSorted = [...stories].sort((a, b) => (b.data.order ?? 0) - (a.data.order ?? 0));
+  return stories.map((story) => {
+    const currentCategoryStories = stories.filter(s => s.data.category === story.data.category);
 
-  // 2. 章節順序排序（純比 order 小到大）
-  const orderSorted = [...stories].sort((a, b) => (a.data.order ?? 0) - (b.data.order ?? 0));
+    const dateSorted = [...currentCategoryStories].sort((a, b) => (b.data.order ?? 0) - (a.data.order ?? 0));
+    const orderSorted = [...currentCategoryStories].sort((a, b) => (a.data.order ?? 0) - (b.data.order ?? 0));
 
-  return dateSorted.map((story) => {
     const dateIdx = dateSorted.findIndex(s => s.id === story.id);
     const orderIdx = orderSorted.findIndex(s => s.id === story.id);
 
@@ -38,13 +37,25 @@ interface Props {
 
 const { story, datePrev, dateNext, orderPrev, orderNext } = Astro.props;
 const { Content } = await render(story);
+
+// 💡 這裡保留作為「備用網址」，如果讀者直接複製網址進來（沒有上一頁），就去分類展開頁
+function getBackLink(category: string) {
+  const routes: Record<string, string> = {
+    '青茸': '/category/green',
+    '分類二': '/category/blue',
+    '生活札記': '/category/diary',
+    '現代詩': '/category/poetry'
+  };
+  return routes[category] || '/stories';
+}
+
+const backToCategoryLink = getBackLink(story.data.category);
 ---
 
 <Layout title={story.data.title} activeNav="stories">
     <style>
         article { position: relative; }
         
-        /* 公用導覽列基礎設定 */
         .story-navigation {
             display: flex;
             margin-top: 5rem;
@@ -52,12 +63,8 @@ const { Content } = await render(story);
             padding-top: 2rem;
         }
 
-        /* 💻 桌機大螢幕樣式 (1241px 以上) */
         @media (min-width: 1241px) {
-            /* 1. 隱形牆導覽列：置中 */
             .desktop-hover-nav { justify-content: center; }
-            
-            /* 2. 底部的文字導覽列：在大螢幕時強制讓「返回列表」居中 💡 */
             .bottom-text-nav .nav-group { justify-content: center !important; }
 
             .hover-zone-prev, .hover-zone-next {
@@ -90,15 +97,16 @@ const { Content } = await render(story);
             .hover-zone-next:hover .nav-floating-next { opacity: 1; }
         }
 
-        /* 📱 手機平版小螢幕樣式 (1240px 以下) */
         @media (max-width: 1240px) {
-            /* 小螢幕時分開兩側排列 */
             .story-navigation { justify-content: space-between; align-items: center; }
-            .desktop-hover-nav { display: none !important; } /* 直接隱藏大螢幕的懸浮牆 */
+            .desktop-hover-nav { display: none !important; }
         }
 
         .nav-group { display: none; width: 100%; justify-content: inherit; align-items: inherit; }
         .nav-group.active { display: flex; }
+        
+        /* 💡 讓返回按鈕看起來跟原本一樣，但加上手勢指標 */
+        .back-link-btn { cursor: pointer; }
     </style>
 
     <article>
@@ -136,12 +144,12 @@ const { Content } = await render(story);
         <div class="story-navigation bottom-text-nav">
             <div class="nav-group date-nav active" style="width:100%; justify-content:space-between; align-items:center;">
                 {datePrev ? <a href={`/story/${datePrev.id}?sort=date`} class="story-nav-link screen-small-only">← 上一篇</a> : <span class="story-nav-link disabled screen-small-only">← 上一篇</span>}
-                <a href="/stories" class="story-nav-link" style="font-size: 0.85rem; letter-spacing: 0.05em;">返回列表</a>
+                <a href={backToCategoryLink} class="story-nav-link back-link-btn" style="font-size: 0.85rem; letter-spacing: 0.05em;">返回列表</a>
                 {dateNext ? <a href={`/story/${dateNext.id}?sort=date`} class="story-nav-link screen-small-only">下一篇 →</a> : <span class="story-nav-link disabled screen-small-only">下一篇 →</span>}
             </div>
             <div class="nav-group order-nav" style="width:100%; justify-content:space-between; align-items:center;">
                 {orderPrev ? <a href={`/story/${orderPrev.id}?sort=order`} class="story-nav-link screen-small-only">← 上一篇</a> : <span class="story-nav-link disabled screen-small-only">← 上一篇</span>}
-                <a href="/stories" class="story-nav-link" style="font-size: 0.85rem; letter-spacing: 0.05em;">返回列表</a>
+                <a href={backToCategoryLink} class="story-nav-link back-link-btn" style="font-size: 0.85rem; letter-spacing: 0.05em;">返回列表</a>
                 {orderNext ? <a href={`/story/${orderNext.id}?sort=order`} class="story-nav-link screen-small-only">下一篇 →</a> : <span class="story-nav-link disabled screen-small-only">下一篇 →</span>}
             </div>
         </div>
@@ -169,6 +177,20 @@ const { Content } = await render(story);
             dateNavs.forEach(el => el.classList.add('active'));
         }
 
+        // 💡 【智慧返回邏輯】判斷讀者是從總覽頁來，還是從展開頁來
+        const backBtns = document.querySelectorAll('.back-link-btn');
+        backBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const referrer = document.referrer;
+                // 如果前一頁的網址包含 '/stories'（總覽頁），就直接用瀏覽器的歷史紀錄上一頁，保留原本的滾動位置！
+                if (referrer && (referrer.includes('/stories') || referrer.includes('/category/'))) {
+                    e.preventDefault();
+                    window.history.back();
+                }
+                // 如果是其他地方或直接開網址，就維持預設的 href（去展開頁）
+            });
+        });
+
         const backToTopBtn = document.getElementById('back-to-top');
         if (!backToTopBtn) return;
         const handleScroll = () => {
@@ -179,6 +201,7 @@ const { Content } = await render(story);
         window.addEventListener('scroll', handleScroll);
         backToTopBtn.addEventListener('click', () => { window.scrollTo({ top: 0, behavior: 'smooth' }); });
     }
+
     initNavigationRoute();
     document.addEventListener('astro:after-swap', initNavigationRoute);
 </script>
