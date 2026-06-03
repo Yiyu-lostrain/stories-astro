@@ -3,7 +3,6 @@ import { getCollection, type CollectionEntry } from 'astro:content';
 import Layout from '../../layouts/Layout.astro';
 
 export async function getStaticPaths() {
-  // 💡 完美回歸妳的 `type` 命名，並且把所有新大標題底下的分類通通加進來，404 直接消滅！
   return [
     { params: { type: 'green' }, props: { catName: '青茸' } },
     { params: { type: 'blue' }, props: { catName: '分類二' } },
@@ -12,37 +11,25 @@ export async function getStaticPaths() {
   ];
 }
 
-// 💡 保持妳原本的變數名稱：type
 const { type } = Astro.params;
 const { catName } = Astro.props;
 
 const allStories = await getCollection('stories');
 
-// 先篩選出這個分類的故事
 const filteredStories = allStories.filter(
   (story: CollectionEntry<'stories'>) => story.data.category === catName
 );
 
-// 產出兩種排序陣列
 const dateSorted = [...filteredStories].sort((a, b) => (b.data.order ?? 0) - (a.data.order ?? 0));
 const orderSorted = [...filteredStories].sort((a, b) => (a.data.order ?? 0) - (b.data.order ?? 0));
 
-interface DisplayStory {
-  slug: string;
-  title: string;
-  summary: string;
-}
+interface DisplayStory { slug: string; title: string; summary: string; }
 
-// 轉換卡片資料的輔助函式
 function processStories(storiesList: CollectionEntry<'stories'>[]): DisplayStory[] {
   return storiesList.map((story: CollectionEntry<'stories'>) => {
     const cleanText = story.body ? story.body.replace(/[#*`~_\[\]()]/g, '').replace(/\s+/g, ' ').trim() : '';
     const summary = cleanText.length > 30 ? cleanText.substring(0, 30) + '...' : cleanText;
-    return {
-      slug: story.id, // Astro 5.0 id
-      title: story.data.title,
-      summary: summary
-    };
+    return { slug: story.id, title: story.data.title, summary: summary };
   });
 }
 
@@ -51,108 +38,39 @@ const displayOrderStories = processStories(orderSorted);
 ---
 
 <Layout title={`${catName} 主題全集`} activeNav="stories">
+    <script is:inline>
+        function applySortTheme() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const sort = urlParams.get('sort') || 'date';
+            document.documentElement.setAttribute('data-global-sort', sort);
+        }
+        applySortTheme();
+        document.addEventListener('astro:after-swap', applySortTheme);
+    </script>
+
     <style>
-        .category-container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 0 1.5rem;
-        }
-
-        .category-info {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 3rem;
-            border-bottom: 1px dashed var(--border-color, #eee);
-            padding-bottom: 1.5rem;
-            margin-top: 2rem;
-        }
-
-        .back-to-stories {
-            font-family: var(--font-sans);
-            font-size: 0.85rem;
-            color: var(--text-color);
-            text-decoration: none;
-            opacity: 0.5;
-            transition: opacity 0.3s;
-            display: inline-block;
-        }
+        .category-container { max-width: 900px; margin: 0 auto; padding: 0 1.5rem; }
+        .category-info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3rem; border-bottom: 1px dashed var(--border-color, #eee); padding-bottom: 1.5rem; margin-top: 2rem; }
+        .back-to-stories { font-family: var(--font-sans); font-size: 0.85rem; color: var(--text-color); text-decoration: none; opacity: 0.5; transition: opacity 0.3s; display: inline-block; }
         .back-to-stories:hover { opacity: 1; color: var(--nav-active); }
-
-        .title-wrap {
-            display: flex;
-            align-items: center;
-            gap: 1.5rem;
-        }
+        .title-wrap { display: flex; align-items: center; gap: 1.5rem; }
         .page-title { margin-bottom: 0; }
+        .sort-toggle-wrap { display: flex; gap: 0.5rem; font-size: 0.8rem; background: var(--border-color, #f5f5f5); padding: 0.2rem; border-radius: 4px; }
+        .sort-btn { cursor: pointer; padding: 0.1rem 0.4rem; border-radius: 3px; opacity: 0.5; transition: all 0.2s; user-select: none; }
 
-        .sort-toggle-wrap {
-            display: flex;
-            gap: 0.5rem;
-            font-size: 0.8rem;
-            background: var(--border-color, #f5f5f5);
-            padding: 0.2rem;
-            border-radius: 4px;
-        }
-        .sort-btn {
-            cursor: pointer;
-            padding: 0.1rem 0.4rem;
-            border-radius: 3px;
-            opacity: 0.5;
-            transition: all 0.2s;
-            user-select: none;
-        }
-        .sort-btn.active {
-            opacity: 1;
-            background: var(--bg-color, #fff);
-            font-weight: bold;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        }
-
-        .full-story-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1.5rem;
-            padding: 1rem 0 4rem 0;
-            align-items: stretch;
-        }
+        /* 💡 【核心救星 2】：利用 CSS 屬性選擇器瞬間隱藏與高亮 */
+        :root[data-global-sort="date"] .sort-btn[data-sort="date"] { opacity: 1; background: var(--bg-color, #fff); font-weight: bold; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        :root[data-global-sort="order"] .sort-btn[data-sort="order"] { opacity: 1; background: var(--bg-color, #fff); font-weight: bold; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         
-        .story-card {
-            display: flex;
-            flex-direction: column;   
-            text-decoration: none;
-            color: inherit;
-            box-sizing: border-box;
-            min-height: 190px;
-            height: 100%;             
-        }
+        :root[data-global-sort="date"] .order-grid { display: none !important; }
+        :root[data-global-sort="order"] .date-grid { display: none !important; }
 
-        .story-card h3 {
-            margin-top: 0;
-            margin-bottom: 0.5rem;
-            font-size: 1.15rem;
-            line-height: 1.4;
-        }
-
-        .story-card p {
-            flex-grow: 1;             
-            margin-bottom: 0;         
-        }
-
-        .grid-hidden { display: none !important; }
-
-        @media (max-width: 900px) {
-            .full-story-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-        @media (max-width: 600px) {
-            .category-container { padding: 0 1rem; }
-            .category-info { flex-direction: column; align-items: flex-start; gap: 1rem; }
-            .full-story-grid {
-                grid-template-columns: 1fr;
-            }
-        }
+        .full-story-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; padding: 1rem 0 4rem 0; align-items: stretch; }
+        .story-card { display: flex; flex-direction: column; text-decoration: none; color: inherit; box-sizing: border-box; min-height: 190px; height: 100%; }
+        .story-card h3 { margin-top: 0; margin-bottom: 0.5rem; font-size: 1.15rem; line-height: 1.4; }
+        .story-card p { flex-grow: 1; margin-bottom: 0; }
+        @media (max-width: 900px) { .full-story-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 600px) { .category-container { padding: 0 1rem; } .category-info { flex-direction: column; align-items: flex-start; gap: 1rem; } .full-story-grid { grid-template-columns: 1fr; } }
     </style>
 
     <div class="category-container">
@@ -160,11 +78,11 @@ const displayOrderStories = processStories(orderSorted);
             <div class="title-wrap">
                 <h2 class="page-title">{catName}</h2>
                 <div class="sort-toggle-wrap">
-                    <span class="sort-btn active" data-sort="date">最新發布</span>
+                    <span class="sort-btn" data-sort="date">最新發布</span>
                     <span class="sort-btn" data-sort="order">章節正序</span>
                 </div>
             </div>
-            <a href="/stories" class="back-to-stories">← 返回作品列表</a>
+            <a href="/stories?sort=date" class="back-to-stories">← 返回作品列表</a>
         </div>
 
         <div class="full-story-grid date-grid">
@@ -180,7 +98,7 @@ const displayOrderStories = processStories(orderSorted);
             )}
         </div>
 
-        <div class="full-story-grid order-grid grid-hidden">
+        <div class="full-story-grid order-grid">
             {displayOrderStories.length > 0 ? (
                 displayOrderStories.map((story) => (
                     <a href={`/story/${story.slug}?sort=order`} class="story-card">
@@ -198,24 +116,29 @@ const displayOrderStories = processStories(orderSorted);
 <script>
     function initPageSortControl() {
         const sortBtns = document.querySelectorAll('.sort-btn');
-        const dateGrid = document.querySelector('.date-grid');
-        const orderGrid = document.querySelector('.order-grid');
+        const backBtn = document.querySelector('.back-to-stories');
 
-        if (sortBtns.length === 0 || !dateGrid || !orderGrid) return;
+        if (sortBtns.length === 0) return;
+
+        function updateBackBtnUrl(type: string) {
+            backBtn?.setAttribute('href', `/stories?sort=${type}`);
+        }
+
+        // 初始化返回按鈕的連結
+        const currentSort = document.documentElement.getAttribute('data-global-sort') || 'date';
+        updateBackBtnUrl(currentSort);
 
         sortBtns.forEach(btn => {
             btn.addEventListener('click', () => {
-                sortBtns.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
+                const sortType = btn.getAttribute('data-sort') || 'date';
+
+                document.documentElement.setAttribute('data-global-sort', sortType);
                 
-                const sortType = btn.getAttribute('data-sort');
-                if (sortType === 'order') {
-                    dateGrid.classList.add('grid-hidden');
-                    orderGrid.classList.remove('grid-hidden');
-                } else {
-                    orderGrid.classList.add('grid-hidden');
-                    dateGrid.classList.remove('grid-hidden');
-                }
+                const newUrl = new URL(window.location.href);
+                newUrl.searchParams.set('sort', sortType);
+                window.history.replaceState({}, '', newUrl);
+
+                updateBackBtnUrl(sortType);
             });
         });
     }

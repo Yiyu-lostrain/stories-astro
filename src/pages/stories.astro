@@ -4,26 +4,15 @@ import Layout from '../layouts/Layout.astro';
 
 const allStories = await getCollection('stories');
 
-// 排序邏輯維持不變
 const dateSorted = [...allStories].sort((a, b) => (b.data.order ?? 0) - (a.data.order ?? 0));
 const orderSorted = [...allStories].sort((a, b) => (a.data.order ?? 0) - (b.data.order ?? 0));
 
-// 定義結構的介面
-interface CategoryStructure {
-  id: string;
-  name: string;
-}
+interface CategoryStructure { id: string; name: string; }
+interface MainSectionStructure { mainTitle: string; mainType: string; categories: CategoryStructure[]; }
 
-interface MainSectionStructure {
-  mainTitle: string;
-  mainType: string;
-  categories: CategoryStructure[];
-}
-
-// 在這裡定義妳的「大標題」以及底下各自擁有的「小標分類」
 const contentStructure: MainSectionStructure[] = [
   {
-    mainTitle: '小說作品',
+    mainTitle: '小說',
     mainType: 'novel',
     categories: [
       { id: 'green', name: '青茸' },
@@ -40,13 +29,8 @@ const contentStructure: MainSectionStructure[] = [
   }
 ];
 
-interface DisplayStory {
-  id: string;
-  title: string;
-  summary: string;
-}
+interface DisplayStory { id: string; title: string; summary: string; }
 
-// 修正輔助函式：加上明確的 TypeScript 型別
 function processStories(storiesList: CollectionEntry<'stories'>[], mainType: string, catName: string): DisplayStory[] {
   return storiesList
     .filter(s => (s.data.type ?? 'novel') === mainType && s.data.category === catName)
@@ -57,7 +41,6 @@ function processStories(storiesList: CollectionEntry<'stories'>[], mainType: str
     });
 }
 
-// 建立多層嵌套資料結構
 const renderedStructure = contentStructure.map(mainSection => ({
   mainTitle: mainSection.mainTitle,
   categories: mainSection.categories.map(cat => ({
@@ -70,6 +53,16 @@ const renderedStructure = contentStructure.map(mainSection => ({
 ---
 
 <Layout title="文章總覽" activeNav="stories">
+    <script is:inline>
+        function applySortTheme() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const sort = urlParams.get('sort') || 'date';
+            document.documentElement.setAttribute('data-global-sort', sort);
+        }
+        applySortTheme();
+        document.addEventListener('astro:after-swap', applySortTheme);
+    </script>
+
     <style>
         .main-section-title { font-size: 1.8rem; margin-top: 3rem; margin-bottom: 1.5rem; padding: 0 1rem; border-left: 4px solid var(--nav-active); padding-left: 1.5rem; }
         .category-section { position: relative; margin-bottom: 4rem; padding: 0 1rem; }
@@ -88,10 +81,16 @@ const renderedStructure = contentStructure.map(mainSection => ({
         .category-header .category-title { margin-bottom: 0; }
         .sort-toggle-wrap { display: flex; gap: 0.5rem; font-size: 0.8rem; background: var(--border-color, #f5f5f5); padding: 0.2rem; border-radius: 4px; }
         .sort-btn { cursor: pointer; padding: 0.1rem 0.4rem; border-radius: 3px; opacity: 0.5; transition: all 0.2s; user-select: none; }
-        .sort-btn.active { opacity: 1; background: var(--bg-color, #fff); font-weight: bold; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        
+        /* 💡 【核心救星 2】：利用 CSS 屬性選擇器，網頁還沒渲染完就決定好按鈕的 active 狀態與 Grid 的隱藏 */
+        :root[data-global-sort="date"] .sort-btn[data-sort="date"] { opacity: 1; background: var(--bg-color, #fff); font-weight: bold; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        :root[data-global-sort="order"] .sort-btn[data-sort="order"] { opacity: 1; background: var(--bg-color, #fff); font-weight: bold; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        
+        :root[data-global-sort="date"] .order-grid { display: none !important; }
+        :root[data-global-sort="order"] .date-grid { display: none !important; }
+
         .see-all-btn { font-family: var(--font-sans); font-size: 0.85rem; color: var(--text-color); text-decoration: none; opacity: 0.5; transition: all 0.3s ease; border-bottom: 1px solid transparent; }
         .see-all-btn:hover { opacity: 1; color: var(--nav-active); border-bottom-color: var(--nav-active); }
-        .grid-hidden { display: none !important; }
     </style>
 
     {renderedStructure.map((section) => (
@@ -104,11 +103,11 @@ const renderedStructure = contentStructure.map(mainSection => ({
                         <div class="category-title-wrap">
                             <h3 class="category-title">{cat.name}</h3>
                             <div class="sort-toggle-wrap">
-                                <span class="sort-btn active" data-sort="date">最新發布</span>
+                                <span class="sort-btn" data-sort="date">最新發布</span>
                                 <span class="sort-btn" data-sort="order">章節正序</span>
                             </div>
                         </div>
-                        <a href={`/category/${cat.id}`} class="see-all-btn">查看全部 →</a>
+                        <a href={`/category/${cat.id}?sort=date`} class="see-all-btn" data-base-url={`/category/${cat.id}`}>查看全部 →</a>
                     </div>
                     
                     <button class="slider-btn btn-left">‹</button>
@@ -123,7 +122,7 @@ const renderedStructure = contentStructure.map(mainSection => ({
                                 </a>
                             ))}
                         </div>
-                        <div class="story-grid order-grid grid-hidden">
+                        <div class="story-grid order-grid">
                             {cat.orderStories.map((story: DisplayStory) => (
                                 <a href={`/story/${story.id}?sort=order`} class="story-card">
                                     <h3>{story.title}</h3>
@@ -143,24 +142,36 @@ const renderedStructure = contentStructure.map(mainSection => ({
         const sections = document.querySelectorAll('.category-section');
         sections.forEach(section => {
             const sortBtns = section.querySelectorAll('.sort-btn');
-            const dateGrid = section.querySelector('.date-grid');
-            const orderGrid = section.querySelector('.order-grid');
+            const seeAllBtn = section.querySelector('.see-all-btn');
 
+            function updateSeeAllUrl(type: string) {
+                if (seeAllBtn) {
+                    const baseUrl = seeAllBtn.getAttribute('data-base-url');
+                    seeAllBtn.setAttribute('href', `${baseUrl}?sort=${type}`);
+                }
+            }
+
+            // 初始化按鈕對應的「查看全部」連結
+            const currentSort = document.documentElement.getAttribute('data-global-sort') || 'date';
+            updateSeeAllUrl(currentSort);
+
+            // 監聽點擊，純粹用來改變 data 標籤與更新網址
             sortBtns.forEach(btn => {
                 btn.addEventListener('click', () => {
-                    sortBtns.forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                    const sortType = btn.getAttribute('data-sort');
-                    if (sortType === 'order') {
-                        dateGrid?.classList.add('grid-hidden');
-                        orderGrid?.classList.remove('grid-hidden');
-                    } else {
-                        orderGrid?.classList.add('grid-hidden');
-                        dateGrid?.classList.remove('grid-hidden');
-                    }
+                    const sortType = btn.getAttribute('data-sort') || 'date';
+                    
+                    // 💡 直接改變 HTML 頂層的標籤，CSS 就會瞬間無縫切換，完全不閃爍！
+                    document.documentElement.setAttribute('data-global-sort', sortType);
+                    
+                    const newUrl = new URL(window.location.href);
+                    newUrl.searchParams.set('sort', sortType);
+                    window.history.replaceState({}, '', newUrl);
+
+                    updateSeeAllUrl(sortType);
                 });
             });
 
+            // 滾動邏輯維持完美運作...
             const grids = section.querySelectorAll('.story-grid');
             const btnLeft = section.querySelector('.btn-left') as HTMLButtonElement;
             const btnRight = section.querySelector('.btn-right') as HTMLButtonElement;
@@ -169,7 +180,10 @@ const renderedStructure = contentStructure.map(mainSection => ({
             let holdTimeout: any = null; let holdInterval: any = null; let isLongPressing = false;
             const clickDistance = 320; const holdSpeed = 16;       
 
-            function getActiveGrid() { return Array.from(grids).find(g => !g.classList.contains('grid-hidden')) as HTMLElement; }
+            // 修改此處：從實際隱藏狀態判斷哪個 Grid 目前正在顯示
+            function getActiveGrid() { 
+                return Array.from(grids).find(g => window.getComputedStyle(g).display !== 'none') as HTMLElement; 
+            }
             function handleScroll(direction: 'left' | 'right') {
                 if (isLongPressing) return;
                 const grid = getActiveGrid(); if (!grid) return;

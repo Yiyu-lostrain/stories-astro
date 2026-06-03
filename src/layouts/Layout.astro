@@ -7,6 +7,23 @@ interface Props {
 }
 
 const { title, activeNav } = Astro.props;
+
+// 💡 【文學彩蛋】：在這裡寫入妳自己想被隨機抽到的詞語庫
+const wordsPool = [
+  '留白',
+  '浮華',
+  '回音',
+  '佚雨',
+  '軌跡',
+  '微光',
+  '赦罪',
+  '醞釀',
+  '淡雪',
+  '夜雨'
+];
+
+// 💡 每次換頁或重新整理時，後端會自動在陣列裡隨機抽選一個詞
+const randomLogoWord = wordsPool[Math.floor(Math.random() * wordsPool.length)];
 ---
 
 <!DOCTYPE html>
@@ -25,7 +42,9 @@ const { title, activeNav } = Astro.props;
 <body>
     <div class="site-container">
         <header>
-            <div class="logo"><a href="/">留白</a></div>
+            <div class="logo">
+                <a href="/">{randomLogoWord}</a>
+            </div>
             <nav>
                 <ul class="nav-links">
                     <li><a href="/" class={activeNav === 'index' ? 'active' : ''}>首頁</a></li>
