@@ -384,6 +384,45 @@ main {
     transform: translateY(-3px);
 }
 
+/* 💡 ✨ 這裡幫妳做了核心優化：將原本的 display 切換改成 opacity 機制 */
+/* 預設把「回總覽」按鈕完全透明化並防誤觸，分類按鈕當安全基底呈現 */
+.back-to-stories-btn {
+    position: absolute !important; /* 讓兩顆按鈕疊在同一個位置，切換時才不會抖動 */
+    left: 50%;
+    transform: translateX(-50%);
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+.back-to-category-btn {
+    position: absolute !important;
+    left: 50%;
+    transform: translateX(-50%);
+    opacity: 0.5 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+}
+
+/* 當整頁非同步被蓋上 [data-from-source="stories"] 總覽章時，瞬間反轉顯示狀態 */
+/* 完全交由顯卡處理，0毫秒重新排版，徹底解決線上卡頓 */
+:root[data-from-source="stories"] .back-to-stories-btn {
+    opacity: 0.5 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+}
+:root[data-from-source="stories"] .back-to-category-btn {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+/* 加上滑鼠懸浮時的正常點亮效果 */
+.back-to-stories-btn:hover,
+.back-to-category-btn:hover {
+    opacity: 1 !important;
+    color: var(--nav-active) !important;
+}
+
 /* --- 霜心雨聚 (Center Content) --- */
 .frost-center {
     display: flex;
@@ -554,7 +593,7 @@ footer p {
     margin: 0;
 }
 
-/* 讓轉場動畫瞬間完成，測試看看卡頓感是否消失 */
+/* 💡 讓轉場動畫瞬間完成，測試看看卡頓感是否消失 */
 ::view-transition-group(*) {
   animation-duration: 0.0s !important;
 }
