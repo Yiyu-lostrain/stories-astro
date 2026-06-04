@@ -553,3 +553,8 @@ footer {
 footer p {
     margin: 0;
 }
+
+/* 讓轉場動畫瞬間完成，測試看看卡頓感是否消失 */
+::view-transition-group(*) {
+  animation-duration: 0.0s !important;
+}
