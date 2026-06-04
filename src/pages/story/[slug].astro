@@ -181,38 +181,36 @@ const backToCategoryLink = currentCatSlug ? `/stories-astro/category/${currentCa
 
 <script>
     function initNavigationRoute() {
-        const urlParams = new URLSearchParams(window.location.search);
-        
-        // 1. 處理排序切換 active
-        const sortType = urlParams.get('sort') || 'date';
-        const dateNavs = document.querySelectorAll('.date-nav');
-        const orderNavs = document.querySelectorAll('.order-nav');
-        if (sortType === 'order') {
-            dateNavs.forEach(el => el.classList.remove('active'));
-            orderNavs.forEach(el => el.classList.add('active'));
-        } else {
-            orderNavs.forEach(el => el.classList.remove('active'));
-            dateNavs.forEach(el => el.classList.add('active'));
-        }
+        // 使用 setTimeout 確保這段邏輯在瀏覽器完成「轉場動畫」並「渲染完 HTML」後才執行
+        setTimeout(() => {
+            const urlParams = new URLSearchParams(window.location.search);
+            
+            // 1. 處理排序切換 active
+            const sortType = urlParams.get('sort') || 'date';
+            const dateNavs = document.querySelectorAll('.date-nav');
+            const orderNavs = document.querySelectorAll('.order-nav');
+            
+            if (sortType === 'order') {
+                dateNavs.forEach(el => el.classList.remove('active'));
+                orderNavs.forEach(el => el.classList.add('active'));
+            } else {
+                orderNavs.forEach(el => el.classList.remove('active'));
+                dateNavs.forEach(el => el.classList.add('active'));
+            }
 
-        // 2. 判斷來源並蓋章
-        const fromParam = urlParams.get('from');
-        
-        // 如果網址上有明確說從總覽來，或者短期記憶體有紀錄，就蓋上總覽章
-        if (fromParam === 'stories') {
-            document.documentElement.setAttribute('data-from-source', 'stories');
-            sessionStorage.setItem('story_from_stories_view', 'true');
-        } 
-        // 如果按上一篇下一篇導致參數掉了，但我們進來時有在小本本記過他是從總覽來的：
-        else if (sessionStorage.getItem('story_from_stories_view') === 'true') {
-            document.documentElement.setAttribute('data-from-source', 'stories');
-        } 
-        // 其他情況（包含從分類頁來），一律移除總覽章（也就是走安全的分類返回按鈕）
-        else {
-            document.documentElement.removeAttribute('data-from-source');
-        }
+            // 2. 判斷來源並蓋章 (這裡的 DOM 操作最容易引發抖動，所以放在 setTimeout 內)
+            const fromParam = urlParams.get('from');
+            if (fromParam === 'stories') {
+                document.documentElement.setAttribute('data-from-source', 'stories');
+                sessionStorage.setItem('story_from_stories_view', 'true');
+            } else if (sessionStorage.getItem('story_from_stories_view') === 'true') {
+                document.documentElement.setAttribute('data-from-source', 'stories');
+            } else {
+                document.documentElement.removeAttribute('data-from-source');
+            }
+        }, 0);
 
-        // 3. 讀者如果點擊了「返回列表」，代表要離開這篇故事了，把短期記憶體清空
+        // 3. 事件綁定 (這部分不影響渲染，可以維持原樣)
         const backBtns = document.querySelectorAll('.back-link-btn');
         backBtns.forEach(btn => {
             btn.addEventListener('click', () => {
@@ -220,18 +218,19 @@ const backToCategoryLink = currentCatSlug ? `/stories-astro/category/${currentCa
             });
         });
 
-        // 4. 回到頂部按鈕
+        // 4. 回到頂部按鈕 (這是互動邏輯，不會影響首幀，可以維持原樣)
         const backToTopBtn = document.getElementById('back-to-top');
-        if (!backToTopBtn) return;
-        const handleScroll = () => {
-            if (window.scrollY > 400) backToTopBtn.classList.add('show');
-            else backToTopBtn.classList.remove('show');
-        };
-        window.removeEventListener('scroll', handleScroll);
-        window.addEventListener('scroll', handleScroll);
-        backToTopBtn.addEventListener('click', () => { window.scrollTo({ top: 0, behavior: 'smooth' }); });
+        if (backToTopBtn) {
+            const handleScroll = () => {
+                backToTopBtn.classList.toggle('show', window.scrollY > 400);
+            };
+            window.removeEventListener('scroll', handleScroll);
+            window.addEventListener('scroll', handleScroll);
+            backToTopBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+        }
     }
 
+    // 啟動與監聽
     initNavigationRoute();
     document.addEventListener('astro:after-swap', initNavigationRoute);
 </script>
