@@ -177,19 +177,8 @@ const backToCategoryLink = getBackLink(story.data.category);
             dateNavs.forEach(el => el.classList.add('active'));
         }
 
-        // 💡 【智慧返回邏輯】判斷讀者是從總覽頁來，還是從展開頁來
-        const backBtns = document.querySelectorAll('.back-link-btn');
-        backBtns.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const referrer = document.referrer;
-                // 如果前一頁的網址包含 '/stories'（總覽頁），就直接用瀏覽器的歷史紀錄上一頁，保留原本的滾動位置！
-                if (referrer && (referrer.includes('/stories') || referrer.includes('/category/'))) {
-                    e.preventDefault();
-                    window.history.back();
-                }
-                // 如果是其他地方或直接開網址，就維持預設的 href（去展開頁）
-            });
-        });
+        // ❌ 這裡原本的 backBtns.forEach 智慧返回邏輯直接「整段擦掉刪除」！
+        // 讓按鈕回歸純潔，直接走 HTML 裡寫好的 href={backToCategoryLink}
 
         const backToTopBtn = document.getElementById('back-to-top');
         if (!backToTopBtn) return;
