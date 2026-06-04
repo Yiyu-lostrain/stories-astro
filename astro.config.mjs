@@ -5,6 +5,7 @@ import { defineConfig } from 'astro/config';
 export default defineConfig({
   base: '/stories-astro/',
   output: 'static',
+  prefetch: true,
   
   // 💡 加上下面這段設定，強制把 _astro 改名成 assets！
   build: {
