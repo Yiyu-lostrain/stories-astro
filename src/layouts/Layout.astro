@@ -2,8 +2,6 @@
 import '../styles/style.css';
 interface Props { title: string; activeNav: 'index' | 'stories' | 'frost' | 'about'; }
 const { title, activeNav } = Astro.props;
-const wordsPool = ['留白', '浮華', '回音', '佚雨', '軌跡', '微光', '赦罪', '醞釀', '淡雪', '夜雨', "傾斜", "正義", "尋覓", "繞行"];
-const randomLogoWord = wordsPool[Math.floor(Math.random() * wordsPool.length)];
 ---
 
 <!DOCTYPE html>
@@ -14,17 +12,30 @@ const randomLogoWord = wordsPool[Math.floor(Math.random() * wordsPool.length)];
     <title>{title} - 佚雨</title>
     <script is:inline>
         (function() {
-            // 優先讀取保存的主題，如果沒有，強制設為淡雪
             const savedTheme = localStorage.getItem('theme') || 'light-snow';
             document.documentElement.setAttribute('data-theme', savedTheme);
         })();
     </script>
+    <style>
+        /* 💡 防止排版塌陷的小魔法：初始狀態下讓文字變透明，但維持原本的撐開寬度 */
+        #random-logo-word:not(:defined), 
+        #random-logo-word {
+            transition: opacity 0.15s ease;
+        }
+        /* 當還沒有抽好詞的時候，如果是空白的，給它一個最小寬度，防止選單暴走 */
+        .logo {
+            min-width: 4em; 
+            display: inline-block;
+        }
+    </style>
 </head>
 <body>
     <div class="site-container">
         <header>
             <div class="logo">
-                <a href="/stories-astro/">{randomLogoWord}</a>
+                {/* 💡 裡面放一個安全的隱形 placeholder（用妳的站名或詞彙庫字數長度），
+                     既能完美撐開空間、防止右邊選單閃爍移位，又不會有固定詞跳動的問題！ */}
+                <a href="/stories-astro/" id="random-logo-word" data-astro-transition-persist="logo-word" style="opacity: 0;">佚雨軌跡</a>
             </div>
             <nav>
                 <ul class="nav-links">
@@ -43,7 +54,22 @@ const randomLogoWord = wordsPool[Math.floor(Math.random() * wordsPool.length)];
             </div>
         </footer>
     </div>
+    
     <script>
+        const clientWordsPool = ['留白', '浮華', '回音', '佚雨', '軌跡', '微光', '赦罪', '醞釀', '淡雪', '夜雨', "傾斜", "正義", "尋覓", "繞行"];
+
+        function randomizeLogoWord() {
+            const logoLink = document.getElementById('random-logo-word');
+            if (!logoLink) return;
+            
+            // 💡 1. 抽詞
+            const randomIndex = Math.floor(Math.random() * clientWordsPool.length);
+            logoLink.textContent = clientWordsPool[randomIndex];
+            
+            // 💡 2. 抽好詞的瞬間，立刻把透明度解鎖，讓它優雅現形
+            logoLink.style.opacity = '1';
+        }
+
         function initThemeControl() {
             const themeToggle = document.getElementById('theme-toggle');
             const html = document.documentElement;
@@ -57,8 +83,16 @@ const randomLogoWord = wordsPool[Math.floor(Math.random() * wordsPool.length)];
                 updateBtn(newTheme);
             });
         }
+
+        // 第一次開網頁：塞隨機詞、變不透明
+        randomizeLogoWord();
         initThemeControl();
-        document.addEventListener('astro:after-swap', initThemeControl);
+        
+        // 往後每次換頁
+        document.addEventListener('astro:after-swap', () => {
+            randomizeLogoWord();
+            initThemeControl();
+        });
     </script>
 </body>
 </html>
