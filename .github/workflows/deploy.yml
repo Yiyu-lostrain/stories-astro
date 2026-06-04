@@ -23,7 +23,7 @@ jobs:
       - name: 📦 設定 Node.js 環境
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22 # ✨ 這裡已經幫妳改成最新的 22 囉！
           cache: 'npm'
 
       - name: 📥 安裝專案依賴套件
@@ -32,11 +32,10 @@ jobs:
       - name: 🏗️ 執行 Astro 打包
         run: npm run build
 
-      - name: 🎫 自動產生 .nojekyll 避免樣式遺失
-        run: touch dist/.nojekyll
-
       - name: 📤 上傳打包成果到 GitHub Pages
-        uses: actions/configure-pages@v5
-      
+        uses: actions/upload-pages-artifact@v3 # ✨ 順便幫妳補上最新版的上傳小幫手
+        with:
+          path: dist
+
       - name: 🚀 部署到雲端
         uses: actions/deploy-pages@v4
