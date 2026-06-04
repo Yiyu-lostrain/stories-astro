@@ -1,28 +1,8 @@
 ---
 import '../styles/style.css';
-
-interface Props {
-  title: string;
-  activeNav: 'index' | 'stories' | 'frost' | 'about';
-}
-
+interface Props { title: string; activeNav: 'index' | 'stories' | 'frost' | 'about'; }
 const { title, activeNav } = Astro.props;
-
-// 💡 【文學彩蛋】：在這裡寫入妳自己想被隨機抽到的詞語庫
-const wordsPool = [
-  '留白',
-  '浮華',
-  '回音',
-  '佚雨',
-  '軌跡',
-  '微光',
-  '赦罪',
-  '醞釀',
-  '淡雪',
-  '夜雨'
-];
-
-// 💡 每次換頁或重新整理時，後端會自動在陣列裡隨機抽選一個詞
+const wordsPool = ['留白', '浮華', '回音', '佚雨', '軌跡', '微光', '赦罪', '醞釀', '淡雪', '夜雨'];
 const randomLogoWord = wordsPool[Math.floor(Math.random() * wordsPool.length)];
 ---
 
@@ -34,6 +14,7 @@ const randomLogoWord = wordsPool[Math.floor(Math.random() * wordsPool.length)];
     <title>{title} - 佚雨</title>
     <script is:inline>
         (function() {
+            // 優先讀取保存的主題，如果沒有，強制設為淡雪
             const savedTheme = localStorage.getItem('theme') || 'light-snow';
             document.documentElement.setAttribute('data-theme', savedTheme);
         })();
@@ -43,22 +24,18 @@ const randomLogoWord = wordsPool[Math.floor(Math.random() * wordsPool.length)];
     <div class="site-container">
         <header>
             <div class="logo">
-                <a href="/">{randomLogoWord}</a>
+                <a href="/stories-astro/">{randomLogoWord}</a>
             </div>
             <nav>
                 <ul class="nav-links">
-                    <li><a href="/" class={activeNav === 'index' ? 'active' : ''}>首頁</a></li>
-                    <li><a href="/stories" class={activeNav === 'stories' ? 'active' : ''}>小說</a></li>
-                    <li><a href="/frost" class={activeNav === 'frost' ? 'active' : ''}>霜心雨聚</a></li>
-                    <li><a href="/about" class={activeNav === 'about' ? 'active' : ''}>好奇嗎</a></li>
+                    <li><a href="/stories-astro/" class={activeNav === 'index' ? 'active' : ''}>首頁</a></li>
+                    <li><a href="/stories-astro/stories" class={activeNav === 'stories' ? 'active' : ''}>小說</a></li>
+                    <li><a href="/stories-astro/frost" class={activeNav === 'frost' ? 'active' : ''}>霜心雨聚</a></li>
+                    <li><a href="/stories-astro/about" class={activeNav === 'about' ? 'active' : ''}>好奇嗎</a></li>
                 </ul>
             </nav>
         </header>
-
-        <main>
-            <slot />
-        </main>
-
+        <main><slot /></main>
         <footer>
             <p>© 2026 佚雨. All Rights Reserved.</p>
             <div class="controls">
@@ -66,34 +43,20 @@ const randomLogoWord = wordsPool[Math.floor(Math.random() * wordsPool.length)];
             </div>
         </footer>
     </div>
-
     <script>
         function initThemeControl() {
             const themeToggle = document.getElementById('theme-toggle');
-            const htmlElement = document.documentElement;
+            const html = document.documentElement;
             if (!themeToggle) return;
-
-            const currentTheme = htmlElement.getAttribute('data-theme') || 'light-snow';
-            updateButtonText(currentTheme);
-
+            const updateBtn = (t: string) => themeToggle.textContent = t === 'night-rain' ? '主題: 夜雨' : '主題: 淡雪';
+            updateBtn(html.getAttribute('data-theme') || 'light-snow');
             themeToggle.addEventListener('click', () => {
-                const activeTheme = htmlElement.getAttribute('data-theme');
-                const newTheme = (activeTheme === 'light-snow') ? 'night-rain' : 'light-snow';
-                
-                htmlElement.setAttribute('data-theme', newTheme);
+                const newTheme = html.getAttribute('data-theme') === 'light-snow' ? 'night-rain' : 'light-snow';
+                html.setAttribute('data-theme', newTheme);
                 localStorage.setItem('theme', newTheme);
-                updateButtonText(newTheme);
+                updateBtn(newTheme);
             });
-
-            function updateButtonText(theme: string) {
-                if (theme === 'night-rain') {
-                    themeToggle!.textContent = '主題: 夜雨';
-                } else {
-                    themeToggle!.textContent = '主題: 淡雪';
-                }
-            }
         }
-
         initThemeControl();
         document.addEventListener('astro:after-swap', initThemeControl);
     </script>

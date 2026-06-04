@@ -82,13 +82,13 @@ const displayOrderStories = processStories(orderSorted);
                     <span class="sort-btn" data-sort="order">章節正序</span>
                 </div>
             </div>
-            <a href="/stories?sort=date" class="back-to-stories">← 返回作品列表</a>
+            <a href="/stories-astro/stories?sort=date" class="back-to-stories">← 返回作品列表</a>
         </div>
 
         <div class="full-story-grid date-grid">
             {displayDateStories.length > 0 ? (
                 displayDateStories.map((story) => (
-                    <a href={`/story/${story.slug}?sort=date`} class="story-card">
+                    <a href={`/stories-astro/story/${story.slug}?sort=date`} class="story-card">
                         <h3>{story.title}</h3>
                         <p>{story.summary}</p>
                     </a>
@@ -101,7 +101,7 @@ const displayOrderStories = processStories(orderSorted);
         <div class="full-story-grid order-grid">
             {displayOrderStories.length > 0 ? (
                 displayOrderStories.map((story) => (
-                    <a href={`/story/${story.slug}?sort=order`} class="story-card">
+                    <a href={`/stories-astro/story/${story.slug}?sort=order`} class="story-card">
                         <h3>{story.title}</h3>
                         <p>{story.summary}</p>
                     </a>
@@ -120,8 +120,9 @@ const displayOrderStories = processStories(orderSorted);
 
         if (sortBtns.length === 0) return;
 
+        // 💡 修正這裡：加上 /stories-astro/ 前綴
         function updateBackBtnUrl(type: string) {
-            backBtn?.setAttribute('href', `/stories?sort=${type}`);
+            backBtn?.setAttribute('href', `/stories-astro/stories?sort=${type}`);
         }
 
         // 初始化返回按鈕的連結

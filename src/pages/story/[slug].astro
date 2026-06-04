@@ -41,12 +41,12 @@ const { Content } = await render(story);
 // 💡 這裡保留作為「備用網址」，如果讀者直接複製網址進來（沒有上一頁），就去分類展開頁
 function getBackLink(category: string) {
   const routes: Record<string, string> = {
-    '青茸': '/category/green',
-    '分類二': '/category/blue',
-    '生活札記': '/category/diary',
-    '現代詩': '/category/poetry'
+    '青茸': '/stories-astro/category/green',
+    '分類二': '/stories-astro/category/blue',
+    '生活札記': '/stories-astro/category/diary',
+    '現代詩': '/stories-astro/category/poetry'
   };
-  return routes[category] || '/stories';
+  return routes[category] || '/stories-astro/stories';
 }
 
 const backToCategoryLink = getBackLink(story.data.category);
@@ -125,32 +125,32 @@ const backToCategoryLink = getBackLink(story.data.category);
         <div class="story-navigation desktop-hover-nav">
             <div class="nav-group date-nav active">
                 <div class="hover-zone-prev">
-                    {datePrev ? <a href={`/story/${datePrev.id}?sort=date`} class="story-nav-link nav-floating-prev">← 上一篇</a> : <span class="story-nav-link disabled nav-floating-prev">← 上一篇</span>}
+                    {datePrev ? <a href={`/stories-astro/story/${datePrev.id}?sort=date`} class="story-nav-link nav-floating-prev">← 上一篇</a> : <span class="story-nav-link disabled nav-floating-prev">← 上一篇</span>}
                 </div>
                 <div class="hover-zone-next">
-                    {dateNext ? <a href={`/story/${dateNext.id}?sort=date`} class="story-nav-link nav-floating-next">下一篇 →</a> : <span class="story-nav-link disabled nav-floating-next">下一篇 →</span>}
+                    {dateNext ? <a href={`/stories-astro/story/${dateNext.id}?sort=date`} class="story-nav-link nav-floating-next">下一篇 →</a> : <span class="story-nav-link disabled nav-floating-next">下一篇 →</span>}
                 </div>
             </div>
             <div class="nav-group order-nav">
                 <div class="hover-zone-prev">
-                    {orderPrev ? <a href={`/story/${orderPrev.id}?sort=order`} class="story-nav-link nav-floating-prev">← 上一篇</a> : <span class="story-nav-link disabled nav-floating-prev">← 上一篇</span>}
+                    {orderPrev ? <a href={`/stories-astro/story/${orderPrev.id}?sort=order`} class="story-nav-link nav-floating-prev">← 上一篇</a> : <span class="story-nav-link disabled nav-floating-prev">← 上一篇</span>}
                 </div>
                 <div class="hover-zone-next">
-                    {orderNext ? <a href={`/story/${orderNext.id}?sort=order`} class="story-nav-link nav-floating-next">下一篇 →</a> : <span class="story-nav-link disabled nav-floating-next">下一篇 →</span>}
+                    {orderNext ? <a href={`/stories-astro/story/${orderNext.id}?sort=order`} class="story-nav-link nav-floating-next">下一篇 →</a> : <span class="story-nav-link disabled nav-floating-next">下一篇 →</span>}
                 </div>
             </div>
         </div>
 
         <div class="story-navigation bottom-text-nav">
             <div class="nav-group date-nav active" style="width:100%; justify-content:space-between; align-items:center;">
-                {datePrev ? <a href={`/story/${datePrev.id}?sort=date`} class="story-nav-link screen-small-only">← 上一篇</a> : <span class="story-nav-link disabled screen-small-only">← 上一篇</span>}
+                {datePrev ? <a href={`/stories-astro/story/${datePrev.id}?sort=date`} class="story-nav-link screen-small-only">← 上一篇</a> : <span class="story-nav-link disabled screen-small-only">← 上一篇</span>}
                 <a href={backToCategoryLink} class="story-nav-link back-link-btn" style="font-size: 0.85rem; letter-spacing: 0.05em;">返回列表</a>
-                {dateNext ? <a href={`/story/${dateNext.id}?sort=date`} class="story-nav-link screen-small-only">下一篇 →</a> : <span class="story-nav-link disabled screen-small-only">下一篇 →</span>}
+                {dateNext ? <a href={`/stories-astro/story/${dateNext.id}?sort=date`} class="story-nav-link screen-small-only">下一篇 →</a> : <span class="story-nav-link disabled screen-small-only">下一篇 →</span>}
             </div>
             <div class="nav-group order-nav" style="width:100%; justify-content:space-between; align-items:center;">
-                {orderPrev ? <a href={`/story/${orderPrev.id}?sort=order`} class="story-nav-link screen-small-only">← 上一篇</a> : <span class="story-nav-link disabled screen-small-only">← 上一篇</span>}
+                {orderPrev ? <a href={`/stories-astro/story/${orderPrev.id}?sort=order`} class="story-nav-link screen-small-only">← 上一篇</a> : <span class="story-nav-link disabled screen-small-only">← 上一篇</span>}
                 <a href={backToCategoryLink} class="story-nav-link back-link-btn" style="font-size: 0.85rem; letter-spacing: 0.05em;">返回列表</a>
-                {orderNext ? <a href={`/story/${orderNext.id}?sort=order`} class="story-nav-link screen-small-only">下一篇 →</a> : <span class="story-nav-link disabled screen-small-only">下一篇 →</span>}
+                {orderNext ? <a href={`/stories-astro/story/${orderNext.id}?sort=order`} class="story-nav-link screen-small-only">下一篇 →</a> : <span class="story-nav-link disabled screen-small-only">下一篇 →</span>}
             </div>
         </div>
     </article>
