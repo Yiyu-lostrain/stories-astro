@@ -2,7 +2,7 @@
 import '../styles/style.css';
 interface Props { title: string; activeNav: 'index' | 'stories' | 'frost' | 'about'; }
 const { title, activeNav } = Astro.props;
-const wordsPool = ['留白', '浮華', '回音', '佚雨', '軌跡', '微光', '赦罪', '醞釀', '淡雪', '夜雨', "傾斜", "正義", "尋覓", ""];
+const wordsPool = ['留白', '浮華', '回音', '佚雨', '軌跡', '微光', '赦罪', '醞釀', '淡雪', '夜雨', "傾斜", "正義", "尋覓", "繞行"];
 const randomLogoWord = wordsPool[Math.floor(Math.random() * wordsPool.length)];
 ---
 
