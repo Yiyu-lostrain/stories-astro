@@ -38,18 +38,18 @@ interface Props {
 const { story, datePrev, dateNext, orderPrev, orderNext } = Astro.props;
 const { Content } = await render(story);
 
-// 💡 這裡保留作為「備用網址」，如果讀者直接複製網址進來（沒有上一頁），就去分類展開頁
-function getBackLink(category: string) {
-  const routes: Record<string, string> = {
-    '青茸': '/stories-astro/category/green',
-    '分類二': '/stories-astro/category/blue',
-    '生活札記': '/stories-astro/category/diary',
-    '現代詩': '/stories-astro/category/poetry'
+function getCategorySlug(category: string) {
+  const mapping: Record<string, string> = {
+    '青茸': 'green',
+    '分類二': 'blue',
+    '生活札記': 'diary',
+    '現代詩': 'poetry'
   };
-  return routes[category] || '/stories-astro/stories';
+  return mapping[category] || '';
 }
 
-const backToCategoryLink = getBackLink(story.data.category);
+const currentCatSlug = getCategorySlug(story.data.category);
+const backToCategoryLink = currentCatSlug ? `/stories-astro/category/${currentCatSlug}` : '/stories-astro/stories';
 ---
 
 <Layout title={story.data.title} activeNav="stories">
@@ -105,8 +105,15 @@ const backToCategoryLink = getBackLink(story.data.category);
         .nav-group { display: none; width: 100%; justify-content: inherit; align-items: inherit; }
         .nav-group.active { display: flex; }
         
-        /* 💡 讓返回按鈕看起來跟原本一樣，但加上手勢指標 */
         .back-link-btn { cursor: pointer; }
+
+        /* 💡 ✨ 預設先把「回總覽」按鈕藏起來，用分類按鈕當安全基底 */
+        .back-to-stories-btn { display: none !important; }
+        .back-to-category-btn { display: inline-block !important; }
+
+        /* 💡 ✨ 當整頁被蓋上 [data-from-source="stories"] 蓋章時，反轉顯示狀態 */
+        :root[data-from-source="stories"] .back-to-stories-btn { display: inline-block !important; }
+        :root[data-from-source="stories"] .back-to-category-btn { display: none !important; }
     </style>
 
     <article>
@@ -122,35 +129,45 @@ const backToCategoryLink = getBackLink(story.data.category);
             <Content />
         </div>
 
+        {/* 1. 桌上型電腦的兩側懸浮按鈕區塊 */}
         <div class="story-navigation desktop-hover-nav">
             <div class="nav-group date-nav active">
                 <div class="hover-zone-prev">
-                    {datePrev ? <a href={`/stories-astro/story/${datePrev.id}?sort=date`} class="story-nav-link nav-floating-prev">← 上一篇</a> : <span class="story-nav-link disabled nav-floating-prev">← 上一篇</span>}
+                    {datePrev ? <a href={`/stories-astro/story/${datePrev.id}?sort=date&from=${Astro.url.searchParams.get('from') || ''}`} class="story-nav-link nav-floating-prev">← 上一篇</a> : <span class="story-nav-link disabled nav-floating-prev">← 上一篇</span>}
                 </div>
                 <div class="hover-zone-next">
-                    {dateNext ? <a href={`/stories-astro/story/${dateNext.id}?sort=date`} class="story-nav-link nav-floating-next">下一篇 →</a> : <span class="story-nav-link disabled nav-floating-next">下一篇 →</span>}
+                    {dateNext ? <a href={`/stories-astro/story/${dateNext.id}?sort=date&from=${Astro.url.searchParams.get('from') || ''}`} class="story-nav-link nav-floating-next">下一篇 →</a> : <span class="story-nav-link disabled nav-floating-next">下一篇 →</span>}
                 </div>
             </div>
             <div class="nav-group order-nav">
                 <div class="hover-zone-prev">
-                    {orderPrev ? <a href={`/stories-astro/story/${orderPrev.id}?sort=order`} class="story-nav-link nav-floating-prev">← 上一篇</a> : <span class="story-nav-link disabled nav-floating-prev">← 上一篇</span>}
+                    {orderPrev ? <a href={`/stories-astro/story/${orderPrev.id}?sort=order&from=${Astro.url.searchParams.get('from') || ''}`} class="story-nav-link nav-floating-prev">← 上一篇</a> : <span class="story-nav-link disabled nav-floating-prev">← 上一篇</span>}
                 </div>
                 <div class="hover-zone-next">
-                    {orderNext ? <a href={`/stories-astro/story/${orderNext.id}?sort=order`} class="story-nav-link nav-floating-next">下一篇 →</a> : <span class="story-nav-link disabled nav-floating-next">下一篇 →</span>}
+                    {orderNext ? <a href={`/stories-astro/story/${orderNext.id}?sort=order&from=${Astro.url.searchParams.get('from') || ''}`} class="story-nav-link nav-floating-next">下一篇 →</a> : <span class="story-nav-link disabled nav-floating-next">下一篇 →</span>}
                 </div>
             </div>
         </div>
 
+        {/* 2. 行動裝置／底部文字按鈕區塊（核心改動：雙按鈕並存） */}
         <div class="story-navigation bottom-text-nav">
             <div class="nav-group date-nav active" style="width:100%; justify-content:space-between; align-items:center;">
-                {datePrev ? <a href={`/stories-astro/story/${datePrev.id}?sort=date`} class="story-nav-link screen-small-only">← 上一篇</a> : <span class="story-nav-link disabled screen-small-only">← 上一篇</span>}
-                <a href={backToCategoryLink} class="story-nav-link back-link-btn" style="font-size: 0.85rem; letter-spacing: 0.05em;">返回列表</a>
-                {dateNext ? <a href={`/stories-astro/story/${dateNext.id}?sort=date`} class="story-nav-link screen-small-only">下一篇 →</a> : <span class="story-nav-link disabled screen-small-only">下一篇 →</span>}
+                {datePrev ? <a href={`/stories-astro/story/${datePrev.id}?sort=date&from=${Astro.url.searchParams.get('from') || ''}`} class="story-nav-link screen-small-only">← 上一篇</a> : <span class="story-nav-link disabled screen-small-only">← 上一篇</span>}
+                
+                {/* 顯示哪顆由 CSS 決定，網址在後台就死死寫好，絕對不會錯 */}
+                <a href="/stories-astro/stories?sort=date" class="story-nav-link back-link-btn back-to-stories-btn" style="font-size: 0.85rem; letter-spacing: 0.05em;">返回列表</a>
+                <a href={`${backToCategoryLink}?sort=date`} class="story-nav-link back-link-btn back-to-category-btn" style="font-size: 0.85rem; letter-spacing: 0.05em;">返回列表</a>
+                
+                {dateNext ? <a href={`/stories-astro/story/${dateNext.id}?sort=date&from=${Astro.url.searchParams.get('from') || ''}`} class="story-nav-link screen-small-only">下一篇 →</a> : <span class="story-nav-link disabled screen-small-only">下一篇 →</span>}
             </div>
             <div class="nav-group order-nav" style="width:100%; justify-content:space-between; align-items:center;">
-                {orderPrev ? <a href={`/stories-astro/story/${orderPrev.id}?sort=order`} class="story-nav-link screen-small-only">← 上一篇</a> : <span class="story-nav-link disabled screen-small-only">← 上一篇</span>}
-                <a href={backToCategoryLink} class="story-nav-link back-link-btn" style="font-size: 0.85rem; letter-spacing: 0.05em;">返回列表</a>
-                {orderNext ? <a href={`/stories-astro/story/${orderNext.id}?sort=order`} class="story-nav-link screen-small-only">下一篇 →</a> : <span class="story-nav-link disabled screen-small-only">下一篇 →</span>}
+                {orderPrev ? <a href={`/stories-astro/story/${orderPrev.id}?sort=order&from=${Astro.url.searchParams.get('from') || ''}`} class="story-nav-link screen-small-only">← 上一篇</a> : <span class="story-nav-link disabled screen-small-only">← 上一篇</span>}
+                
+                {/* 顯示哪顆由 CSS 決定，網址在後台就死死寫好，絕對不會錯 */}
+                <a href="/stories-astro/stories?sort=order" class="story-nav-link back-link-btn back-to-stories-btn" style="font-size: 0.85rem; letter-spacing: 0.05em;">返回列表</a>
+                <a href={`${backToCategoryLink}?sort=order`} class="story-nav-link back-link-btn back-to-category-btn" style="font-size: 0.85rem; letter-spacing: 0.05em;">返回列表</a>
+                
+                {orderNext ? <a href={`/stories-astro/story/${orderNext.id}?sort=order&from=${Astro.url.searchParams.get('from') || ''}`} class="story-nav-link screen-small-only">下一篇 →</a> : <span class="story-nav-link disabled screen-small-only">下一篇 →</span>}
             </div>
         </div>
     </article>
@@ -165,10 +182,11 @@ const backToCategoryLink = getBackLink(story.data.category);
 <script>
     function initNavigationRoute() {
         const urlParams = new URLSearchParams(window.location.search);
+        
+        // 1. 處理排序切換 active
         const sortType = urlParams.get('sort') || 'date';
         const dateNavs = document.querySelectorAll('.date-nav');
         const orderNavs = document.querySelectorAll('.order-nav');
-
         if (sortType === 'order') {
             dateNavs.forEach(el => el.classList.remove('active'));
             orderNavs.forEach(el => el.classList.add('active'));
@@ -177,9 +195,32 @@ const backToCategoryLink = getBackLink(story.data.category);
             dateNavs.forEach(el => el.classList.add('active'));
         }
 
-        // ❌ 這裡原本的 backBtns.forEach 智慧返回邏輯直接「整段擦掉刪除」！
-        // 讓按鈕回歸純潔，直接走 HTML 裡寫好的 href={backToCategoryLink}
+        // 2. 判斷來源並蓋章
+        const fromParam = urlParams.get('from');
+        
+        // 如果網址上有明確說從總覽來，或者短期記憶體有紀錄，就蓋上總覽章
+        if (fromParam === 'stories') {
+            document.documentElement.setAttribute('data-from-source', 'stories');
+            sessionStorage.setItem('story_from_stories_view', 'true');
+        } 
+        // 如果按上一篇下一篇導致參數掉了，但我們進來時有在小本本記過他是從總覽來的：
+        else if (sessionStorage.getItem('story_from_stories_view') === 'true') {
+            document.documentElement.setAttribute('data-from-source', 'stories');
+        } 
+        // 其他情況（包含從分類頁來），一律移除總覽章（也就是走安全的分類返回按鈕）
+        else {
+            document.documentElement.removeAttribute('data-from-source');
+        }
 
+        // 3. 讀者如果點擊了「返回列表」，代表要離開這篇故事了，把短期記憶體清空
+        const backBtns = document.querySelectorAll('.back-link-btn');
+        backBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                sessionStorage.removeItem('story_from_stories_view');
+            });
+        });
+
+        // 4. 回到頂部按鈕
         const backToTopBtn = document.getElementById('back-to-top');
         if (!backToTopBtn) return;
         const handleScroll = () => {

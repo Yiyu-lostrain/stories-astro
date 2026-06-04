@@ -113,17 +113,20 @@ const renderedStructure = contentStructure.map(mainSection => ({
                     <button class="slider-btn btn-right">›</button>
                     
                     <div class="slider-wrapper">
+                        {/* ✨ 最新發布網址：已補上 &from=stories 印章 */}
                         <div class="story-grid date-grid">
                             {cat.dateStories.map((story: DisplayStory) => (
-                                <a href={`/stories-astro/story/${story.id}?sort=date`} class="story-card">
+                                <a href={`/stories-astro/story/${story.id}?sort=date&from=stories`} class="story-card">
                                     <h3>{story.title}</h3>
                                     <p>{story.summary}</p>
                                 </a>
                             ))}
                         </div>
+                        
+                        {/* ✨ 章節正序網址：已補上 &from=stories 印章 */}
                         <div class="story-grid order-grid">
                             {cat.orderStories.map((story: DisplayStory) => (
-                                <a href={`/stories-astro/story/${story.id}?sort=order`} class="story-card">
+                                <a href={`/stories-astro/story/${story.id}?sort=order&from=stories`} class="story-card">
                                     <h3>{story.title}</h3>
                                     <p>{story.summary}</p>
                                 </a>

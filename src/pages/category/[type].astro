@@ -58,7 +58,6 @@ const displayOrderStories = processStories(orderSorted);
         .sort-toggle-wrap { display: flex; gap: 0.5rem; font-size: 0.8rem; background: var(--border-color, #f5f5f5); padding: 0.2rem; border-radius: 4px; }
         .sort-btn { cursor: pointer; padding: 0.1rem 0.4rem; border-radius: 3px; opacity: 0.5; transition: all 0.2s; user-select: none; }
 
-        /* 💡 【核心救星 2】：利用 CSS 屬性選擇器瞬間隱藏與高亮 */
         :root[data-global-sort="date"] .sort-btn[data-sort="date"] { opacity: 1; background: var(--bg-color, #fff); font-weight: bold; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         :root[data-global-sort="order"] .sort-btn[data-sort="order"] { opacity: 1; background: var(--bg-color, #fff); font-weight: bold; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         
@@ -85,10 +84,11 @@ const displayOrderStories = processStories(orderSorted);
             <a href="/stories-astro/stories?sort=date" class="back-to-stories">← 返回作品列表</a>
         </div>
 
+        {/* 💡 ✨ 這裡加上了從分類頁進去的專屬標記：&from={type} */}
         <div class="full-story-grid date-grid">
             {displayDateStories.length > 0 ? (
                 displayDateStories.map((story) => (
-                    <a href={`/stories-astro/story/${story.slug}?sort=date`} class="story-card">
+                    <a href={`/stories-astro/story/${story.slug}?sort=date&from=${type}`} class="story-card-link story-card" data-slug={story.slug}>
                         <h3>{story.title}</h3>
                         <p>{story.summary}</p>
                     </a>
@@ -98,10 +98,11 @@ const displayOrderStories = processStories(orderSorted);
             )}
         </div>
 
+        {/* 💡 ✨ 同樣加上專屬標記：&from={type} */}
         <div class="full-story-grid order-grid">
             {displayOrderStories.length > 0 ? (
                 displayOrderStories.map((story) => (
-                    <a href={`/stories-astro/story/${story.slug}?sort=order`} class="story-card">
+                    <a href={`/stories-astro/story/${story.slug}?sort=order&from=${type}`} class="story-card-link story-card" data-slug={story.slug}>
                         <h3>{story.title}</h3>
                         <p>{story.summary}</p>
                     </a>
@@ -113,21 +114,30 @@ const displayOrderStories = processStories(orderSorted);
     </div>
 </Layout>
 
-<script>
+<script define:vars={{ type }}>
+    // 💡 透過 define:vars 把 Astro 的分類變數傳進客戶端腳本
     function initPageSortControl() {
         const sortBtns = document.querySelectorAll('.sort-btn');
         const backBtn = document.querySelector('.back-to-stories');
+        const storyLinks = document.querySelectorAll('.story-card-link');
 
         if (sortBtns.length === 0) return;
 
-        // 💡 修正這裡：加上 /stories-astro/ 前綴
-        function updateBackBtnUrl(type: string) {
-            backBtn?.setAttribute('href', `/stories-astro/stories?sort=${type}`);
+        // 智慧型更新：連同返回按鈕與所有卡片連結一起刷新
+        function updateAllUrls(currentSort) {
+            // 1. 更新返回總列表連結
+            backBtn?.setAttribute('href', `/stories-astro/stories?sort=${currentSort}`);
+            
+            // 2. 動態更新文章卡片的連結，確保切換排序時，點進去的參數也是正確的
+            storyLinks.forEach(link => {
+                const slug = link.getAttribute('data-slug');
+                link.setAttribute('href', `/stories-astro/story/${slug}?sort=${currentSort}&from=${type}`);
+            });
         }
 
-        // 初始化返回按鈕的連結
+        // 初始化一進來的狀態
         const currentSort = document.documentElement.getAttribute('data-global-sort') || 'date';
-        updateBackBtnUrl(currentSort);
+        updateAllUrls(currentSort);
 
         sortBtns.forEach(btn => {
             btn.addEventListener('click', () => {
@@ -139,7 +149,8 @@ const displayOrderStories = processStories(orderSorted);
                 newUrl.searchParams.set('sort', sortType);
                 window.history.replaceState({}, '', newUrl);
 
-                updateBackBtnUrl(sortType);
+                // 當讀者手動切換最新/正序時，把所有 href 裡面的參數同步換掉
+                updateAllUrls(sortType);
             });
         });
     }
