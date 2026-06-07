@@ -1,36 +1,55 @@
 ---
 import Layout from '../layouts/Layout.astro';
 
-// 💡 ✨ 1. 把詩詞庫和計算直接搬到 Astro 的後台（伺服器端）！
+// 💡 詩詞庫依然可以放在這裡當純資料，也可以移到下方，但放這裡比較好閱讀
 const quotes = [
     "獨倚樓欄斜望市<br>沉思世間百慕華",
     "昨夜如雨落下",
     "冬歌夜雪幾殘盡，曉月寧無聲。<br>俯仰承散絕境旅，蝶逝輓家遊故人。",
     "世人皆醒我獨醉",
     "蟬時雨<br>夏夜空",
-    "而我必將逝去<br>願那永恆的未來<br>明豔如初"
+    "而我必將逝去<br>願那永恆的未來<br>明豔如初",
+    "何日方知我是我",
+    "此身此情<br>葬結雨露均芳"
 ];
-
-// 💡 ✨ 2. 讓伺服器在打包（或渲染）網頁的當下，就直接算好今天是哪一首
-const now = new Date();
-const year = now.getFullYear();
-const month = now.getMonth() + 1;
-const date = now.getDate();
-
-const dateIdentifier = year * 10000 + month * 100 + date;
-const targetIndex = dateIdentifier % quotes.length;
-const todaysQuote = quotes[targetIndex];
 ---
 
 <Layout title="霜心雨聚" activeNav="frost">
     <section class="frost-center">
-        {/* 💡 ✨ 3. 奇蹟發生的時刻！HTML 原始碼一出生就帶著今天的詩詞，
-             這樣 Astro 換頁過來時，是一座蓋好的城堡，完全不需要前端 JavaScript 動手！ */}
-        <div class="frost-text" id="daily-frost-content" set:html={todaysQuote}>
+        <div class="frost-text" id="daily-frost-content" style="opacity: 0; transition: opacity 0.3s ease;">
+            凝聚中...
         </div>
     </section>
 </Layout>
 
-{/* 💡 ✨ 4. 沒錯！下面的 <script> 大腦可以直接「全部刪除」！
-     因為後台已經把事情做完了，前端不需要再監聽任何 astro:after-swap，
-     排版塌陷消失、JS 衝突消失，整個頁面閃爍也必定跟著徹底消失！ */}
+<script define:vars={{ quotes }}>
+    // 💡 使用 define:vars 把 Astro 區塊的 quotes 陣列安全地傳遞給前端 JavaScript
+    
+    function renderDailyFrost() {
+        const contentEl = document.getElementById('daily-frost-content');
+        if (!contentEl) return;
+
+        // 1. 每次讀者打開網頁時，現場抓取當下的時間
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth() + 1;
+        const date = now.getDate();
+
+        // 2. 算今天的日期印記（例如 20260607）
+        const dateIdentifier = year * 10000 + month * 100 + date;
+        const targetIndex = dateIdentifier % quotes.length;
+        const todaysQuote = quotes[targetIndex];
+
+        // 3. 因為句子裡面有 <br>，必須使用 innerHTML 瀏覽器才會正確換行
+        contentEl.innerHTML = todaysQuote;
+        
+        // 4. 計算完後再亮起，徹底防範「閃爍」或「看到預設字」的尷尬體感
+        contentEl.style.opacity = '1';
+    }
+
+    // 第一次載入時執行
+    renderDailyFrost();
+
+    // 確保讀者透過 View Transitions 點擊切換過來時，也會重新現場計算
+    document.addEventListener('astro:page-load', renderDailyFrost);
+</script>
